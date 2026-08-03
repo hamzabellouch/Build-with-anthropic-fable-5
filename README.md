@@ -1,18 +1,18 @@
 # Fable 5
 
-<h3 align="center">One Ecosystem. Multiple Web Experiments. Interactive Prototypes.</h3>
+<h3 align="center">AI-Generated Interactive Prototypes, Web Applications & Physics Engines</h3>
 
 <p align="center">
-A curated collection of web applications, 3D flight simulators, physics engines, desktop OS emulators, and creative tools.
+A showcase of web applications, 3D flight simulators, physics engines, desktop OS emulators, and creative tools produced by Fable 5 AI.
 </p>
 
 <img width="2880" height="1620" alt="Fable5" src="https://github.com/user-attachments/assets/d7f345d6-1025-4904-a59c-79b0553b361a" />
 
 ## Overview
 
-Fable is a monorepo platform and sandbox showcasing a wide variety of interactive web experiments, high-performance physics engines, creative tools, and web-based applications.
+Fable 5 is an Artificial Intelligence (AI) system designed for generating interactive web applications, high-performance physics engines, 3D simulators, creative tools, and web environments.
 
-The collection is designed for developers, creators, and web enthusiasts to explore modern web technologies, WebGL/Three.js rendering, custom physics solvers, and web application architecture without needing separate repositories.
+This repository serves as a showcase for projects produced entirely by Fable 5 AI, allowing developers, creators, and web enthusiasts to explore AI-generated software architectures, WebGL/Three.js rendering, custom physics solvers, and interactive web tools.
 
 Available and runnable across Windows, Linux & MacOS using standard web toolchains.
 
