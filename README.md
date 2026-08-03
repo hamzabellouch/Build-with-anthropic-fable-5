@@ -6,9 +6,7 @@
 A curated collection of web applications, 3D flight simulators, physics engines, desktop OS emulators, and creative tools.
 </p>
 
-<div align="center">
-  <img src="OS/docs/screenshot-desktop.png" width="800" alt="Fable Web OS Desktop"/>
-</div>
+<img width="2880" height="1620" alt="Fable5" src="https://github.com/user-attachments/assets/d7f345d6-1025-4904-a59c-79b0553b361a" />
 
 ## Overview
 
