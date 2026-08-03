@@ -1,0 +1,80 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Package manager lockfiles
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+npm-shrinkwrap.json
+
+# Builds and generated output
+.next/
+out/
+dist/
+build/
+coverage/
+.vercel/
+.turbo/
+.cache/
+.parcel-cache/
+*.tsbuildinfo
+next-env.d.ts
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local secrets and machine-specific config
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.local
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+
+# Logs and diagnostics
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.playwright-mcp/
+playwright-report/
+test-results/
+
+# Project-local generated data
+/obsidian/server/data/
+/video-editor/projects/
+/video-editor/samples/
+/arabic-motion/examples/out_*.mp4
+/arabic-motion/*.srt
+/arabic-motion/*.timeline.json
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.gemini/
+.antigravity/
+*.tmp
+*.swp
+

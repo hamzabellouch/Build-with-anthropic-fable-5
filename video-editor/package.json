@@ -1,0 +1,28 @@
+{
+  "name": "cutroom",
+  "version": "0.1.0",
+  "description": "CutRoom — an AI video editor: removes silences, cuts bad takes (Soniox STT), and overlays AI-designed concept graphics (Gemini via OpenRouter), with a browser review UI before final render.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "edit": "node src/cli.ts edit",
+    "analyze": "node src/cli.ts analyze",
+    "render": "node src/cli.ts render",
+    "ui": "node src/cli.ts ui",
+    "sample": "bash scripts/make-sample.sh",
+    "test": "node --test test/timeline.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.0"
+  }
+}

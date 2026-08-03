@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FPV AcroSim — physics-accurate FPV drone simulator</title>
+<style>
+  :root {
+    --osd: #e8e8e8;
+    --accent: #ffb300;
+    --panel: rgba(12, 14, 18, 0.92);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; font-family: 'Segoe UI', system-ui, sans-serif; }
+  #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #hud { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  #start {
+    position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px;
+    background: radial-gradient(ellipse at center, rgba(10,14,22,.88), rgba(2,4,8,.97));
+    color: #dfe6ee; text-align: center;
+  }
+  #start h1 { font-size: 42px; margin: 0; letter-spacing: 2px; color: var(--accent); font-weight: 800; }
+  #start h1 small { display:block; font-size: 13px; color: #9fb0c0; letter-spacing: 1px; font-weight: 400; margin-top: 6px;}
+  #start .pad { display:flex; gap:40px; margin: 8px 0; font-size: 13px; color:#aebdcb; }
+  #start .pad div { text-align:left; line-height: 1.75; }
+  #start .pad b { color:#e8eef4; }
+  #start button {
+    font-size: 20px; padding: 12px 54px; border-radius: 8px; border: 1px solid var(--accent);
+    background: rgba(255,179,0,.12); color: var(--accent); cursor: pointer; font-weight: 700; letter-spacing: 1px;
+  }
+  #start button:hover { background: rgba(255,179,0,.25); }
+  #gpstatus { font-size: 13px; color: #7fd07f; min-height: 18px; }
+
+  #menu {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 380px; z-index: 15;
+    background: var(--panel); color: #d7dee6; overflow-y: auto; overflow-x: hidden;
+    padding: 14px 16px 40px;
+    border-left: 1px solid #2a323c; display: none; font-size: 13px;
+  }
+  #menu.open { display: block; }
+  #menu .row { min-width: 0; }
+  #menu .row label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #menu h2 { font-size: 15px; color: var(--accent); margin: 4px 0 8px; }
+  #menu h3 { font-size: 12.5px; color: #9fc1e8; text-transform: uppercase; letter-spacing: 1px; margin: 18px 0 6px; border-bottom: 1px solid #2a323c; padding-bottom: 4px; }
+  #menu .row { display: flex; align-items: center; justify-content: space-between; margin: 5px 0; gap: 8px; }
+  #menu .row label { flex: 0 0 40%; color: #c2ccd6; }
+  #menu .row .val { flex: 0 0 52px; text-align: right; color: #fff; font-variant-numeric: tabular-nums; }
+  #menu input[type=range] { flex: 1; accent-color: var(--accent); }
+  #menu select, #menu button.small { background: #1c232c; color: #e3e9ef; border: 1px solid #39434f; border-radius: 4px; padding: 4px 8px; font-size: 12.5px; }
+  #menu button.small { cursor: pointer; }
+  #menu button.small:hover { border-color: var(--accent); }
+  #menu input[type=checkbox] { accent-color: var(--accent); transform: scale(1.15); }
+  #menu .note { color: #8593a2; font-size: 11.5px; margin: 4px 0 8px; line-height: 1.45; }
+  #menu .det { color: var(--accent); }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="hud"></canvas>
+
+<div id="start">
+  <h1>FPV ACROSIM<small>physics-accurate FPV quad simulator &nbsp;·&nbsp; 1 kHz rigid-body / motor / battery / aero model</small></h1>
+  <div class="pad">
+    <div>
+      <b>Radio / gamepad (recommended)</b><br>
+      Plug in your RC transmitter (USB joystick mode)<br>
+      or any gamepad, then move the sticks.<br>
+      Map &amp; calibrate channels in Settings (Esc).
+    </div>
+    <div>
+      <b>Keyboard</b><br>
+      W / S throttle &nbsp;·&nbsp; A / D yaw<br>
+      Arrows pitch / roll &nbsp;·&nbsp; <b>Enter</b> arm/disarm<br>
+      R reset · B fresh pack · C camera · M acro/angle
+    </div>
+    <div>
+      <b>More</b><br>
+      T slow-motion · G tuning graph · H help<br>
+      Esc settings · Race gates with lap timing<br>
+      Crash damage is ON — fly like it's your money.
+    </div>
+  </div>
+  <button id="startBtn">ENTER THE FIELD</button>
+  <div id="gpstatus">No controller detected — keyboard armed. Move a stick to detect.</div>
+</div>
+
+<div id="menu"></div>
+
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

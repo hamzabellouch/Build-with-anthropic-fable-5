@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Veritas — Real Physics Engine</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚛️</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="toolbar">
+    <div class="brand">⚛ VERITAS <span>physics engine</span></div>
+    <select id="sceneSelect" title="Scene (keys 1–8)"></select>
+    <div class="group">
+      <button id="btnPause" title="Play / pause (Space)">⏸</button>
+      <button id="btnStep" title="Single step (.)">⏭</button>
+      <button id="btnReset" title="Reset scene (R)">↺</button>
+    </div>
+    <div class="group tools-group">
+      <button class="tool active" data-tool="drag" title="Grab &amp; throw bodies">✋ grab</button>
+      <button class="tool" data-tool="ball" title="Spawn ball — drag to slingshot">● ball</button>
+      <button class="tool" data-tool="box" title="Spawn box — drag to slingshot">■ box</button>
+    </div>
+    <div class="spacer"></div>
+    <button id="btnPanel" title="Toggle control panel">⚙</button>
+  </header>
+
+  <main id="stage">
+    <canvas id="canvas"></canvas>
+
+    <aside id="panel">
+      <section>
+        <h2>Scene</h2>
+        <p id="sceneDesc" class="desc"></p>
+      </section>
+
+      <section>
+        <h2>World</h2>
+        <label>gravity g <output id="gravityVal"></output>
+          <input type="range" id="gravity" min="0" max="25" step="0.01"></label>
+        <div id="gravityNote" class="note"></div>
+        <label>air density ρ <output id="airVal"></output>
+          <input type="range" id="air" min="0" max="3" step="0.05"></label>
+        <label>time scale <output id="timeScaleVal"></output>
+          <input type="range" id="timeScale" min="0.05" max="3" step="0.05"></label>
+        <label>solver iterations <output id="iterationsVal"></output>
+          <input type="range" id="iterations" min="4" max="40" step="1"></label>
+      </section>
+
+      <section>
+        <h2>Spawned bodies</h2>
+        <label>restitution e <output id="spawnRestitutionVal"></output>
+          <input type="range" id="spawnRestitution" min="0" max="1" step="0.01"></label>
+        <label>friction μ <output id="spawnFrictionVal"></output>
+          <input type="range" id="spawnFriction" min="0" max="1" step="0.01"></label>
+        <label>density <output id="spawnDensityVal"></output>
+          <input type="range" id="spawnDensity" min="0.2" max="10" step="0.1"></label>
+        <label>size <output id="spawnSizeVal"></output>
+          <input type="range" id="spawnSize" min="0.15" max="1.5" step="0.05"></label>
+      </section>
+
+      <section>
+        <h2>Display</h2>
+        <div class="checks">
+          <label><input type="checkbox" data-option="grid"> grid</label>
+          <label><input type="checkbox" data-option="trails"> trails</label>
+          <label><input type="checkbox" data-option="vectors"> velocity</label>
+          <label><input type="checkbox" data-option="contacts"> contacts</label>
+          <label><input type="checkbox" data-option="aabbs"> AABBs</label>
+          <label><input type="checkbox" data-option="labels"> labels</label>
+        </div>
+      </section>
+
+      <section>
+        <h2>Energy <span class="unit">total (J)</span></h2>
+        <canvas id="energyGraph" width="232" height="48"></canvas>
+        <div class="stats">
+          <div>kinetic <b id="statKe">0</b></div>
+          <div>potential <b id="statPe">0</b></div>
+          <div>total <b id="statTotal">0</b></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Stats</h2>
+        <div class="stats">
+          <div>fps <b id="statFps">0</b></div>
+          <div>bodies <b id="statBodies">0</b></div>
+          <div>contacts <b id="statContacts">0</b></div>
+          <div>sim time <b id="statTime">0</b></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Controls</h2>
+        <p class="desc">
+          <b>Left-drag</b> grab / slingshot · <b>Right-drag</b> pan ·
+          <b>Wheel</b> zoom · <b>Space</b> pause · <b>.</b> step ·
+          <b>R</b> reset · <b>1–8</b> scenes · <b>v</b> velocity vectors ·
+          <b>c</b> contacts · <b>t</b> trails · <b>g</b> grid
+        </p>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

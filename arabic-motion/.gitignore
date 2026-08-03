@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+examples/out_*.mp4
+*.srt
+*.timeline.json

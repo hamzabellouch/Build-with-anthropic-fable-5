@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Spread of Islam — 1,400 Years, One Globe</title>
+<meta name="description" content="An interactive globe tracing how Islam spread from 610 CE to the present day.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🕌</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <header id="topbar">
+    <div class="title-block">
+      <h1>The Spread of Islam <span class="arabic">انتشار الإسلام</span></h1>
+      <p class="subtitle">An interactive 1,400-year journey · 610 CE → today</p>
+    </div>
+    <div class="top-right">
+      <div class="legend">
+        <span class="chip"><i class="sw core"></i>Muslim rule / majority</span>
+        <span class="chip"><i class="sw light"></i>Minority &amp; influence</span>
+        <span class="chip"><i class="sw route"></i>Trade routes</span>
+        <span class="chip"><i class="sw event"></i>Events</span>
+      </div>
+      <button id="about-btn" class="icon-btn" title="About this map" aria-label="About this map">?</button>
+    </div>
+  </header>
+
+  <main id="stage">
+    <canvas id="globe"></canvas>
+    <div id="tooltip" hidden></div>
+    <button id="panel-toggle" class="icon-btn" title="Toggle info panel" aria-label="Toggle info panel">ℹ</button>
+
+    <aside id="panel">
+      <div class="year-block">
+        <div id="year-big">610</div>
+        <div id="year-suffix">CE</div>
+      </div>
+      <div id="era-chip" class="era-chip">The Revelation</div>
+      <p id="era-blurb" class="era-blurb"></p>
+
+      <div class="stats-card">
+        <div class="stat-line"><span id="stat-muslims">—</span></div>
+        <div class="stat-line dim"><span id="stat-share">—</span></div>
+        <svg id="sparkline" width="100%" height="42" viewBox="0 0 280 42" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <div class="stat-note">Rough scholarly estimates, interpolated</div>
+      </div>
+
+      <div class="events-head">Around this time</div>
+      <div id="events-list" class="events-list"></div>
+
+      <div class="hint">Drag to rotate · scroll to zoom · click gold events<br>← → step years (shift = ×10) · space plays</div>
+    </aside>
+  </main>
+
+  <footer id="controls">
+    <div class="ctrl-left">
+      <button id="play-btn" class="big-btn" title="Play / pause (space)" aria-label="Play or pause">▶</button>
+      <button id="speed-btn" class="small-btn" title="Playback speed">1×</button>
+    </div>
+    <div class="timeline">
+      <div id="era-strip" aria-hidden="true"></div>
+      <input type="range" id="year-slider" min="610" max="2026" step="1" value="610" aria-label="Year">
+      <div id="tick-row" aria-hidden="true"></div>
+    </div>
+    <div class="ctrl-right">
+      <div class="year-readout"><input type="number" id="year-input" min="610" max="2026" value="610" aria-label="Year input"><span>CE</span></div>
+      <button id="spin-btn" class="small-btn active" title="Toggle auto-rotation">⟳</button>
+      <button id="home-btn" class="small-btn" title="Reset view">⌂</button>
+    </div>
+  </footer>
+
+  <div id="about-modal" class="modal" hidden>
+    <div class="modal-card">
+      <button class="modal-close icon-btn" aria-label="Close">✕</button>
+      <h2>About this map</h2>
+      <p>This globe traces the geographic story of Islam — from the first revelation near Mecca in
+         610 CE to a worldwide community of roughly two billion people today.</p>
+      <p><strong>Green areas</strong> show lands under Muslim rule and/or with Muslim-majority
+         populations; <strong>pale areas</strong> show significant minorities, rule over largely
+         non-Muslim populations, or strong trading influence. <strong>Gold dots</strong> are key
+         events; <strong>dashed lines</strong> are the trade routes — Saharan, Silk Road and
+         Indian Ocean — along which the faith often travelled farther than any army.</p>
+      <p><strong>All boundaries and dates are approximate.</strong> Historical frontiers were
+         zones, not lines; conversion of populations lagged conquest by centuries, and this
+         visualization simplifies both. It is an educational sketch, not a scholarly atlas.</p>
+      <p class="dim">Base geography: Natural Earth via world-atlas. Modern percentages: Pew Research
+         Center estimates. Historical extents and dates: standard reference historiography,
+         hand-drawn for this visualization. Built with D3.js — everything runs locally in your
+         browser.</p>
+    </div>
+  </div>
+
+</div>
+
+<script src="vendor/d3.v7.min.js"></script>
+<script src="vendor/topojson-client.min.js"></script>
+<script src="data/world-topo.js"></script>
+<script src="data/history.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

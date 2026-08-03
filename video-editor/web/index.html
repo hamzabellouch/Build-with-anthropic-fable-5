@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CutRoom — review</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='2' width='20' height='20' rx='5' fill='%235b8cff'/%3E%3Cpath d='M7 12h10M12 7v10' stroke='%23fff' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-dot"></span>CutRoom</div>
+    <div class="project" id="projectName">…</div>
+    <div class="mode" role="tablist">
+      <button id="modeOriginal" class="mode-btn">Original</button>
+      <button id="modeEdited" class="mode-btn active">Edited preview</button>
+    </div>
+    <div class="spacer"></div>
+    <div id="renderStatus" class="render-status"></div>
+    <button id="btnRender" class="btn primary">Render final video</button>
+  </header>
+
+  <main class="layout">
+    <section class="stage">
+      <div class="player-wrap" id="playerWrap">
+        <video id="video" playsinline></video>
+        <div id="overlayLayer" class="overlay-layer"></div>
+        <div id="skipFlash" class="skip-flash">cut skipped</div>
+      </div>
+
+      <div class="strip-wrap">
+        <div class="strip" id="strip">
+          <div class="playhead" id="playhead"></div>
+        </div>
+        <div class="strip-legend">
+          <span><i class="sw keep"></i>kept</span>
+          <span><i class="sw cut"></i>cut</span>
+          <span><i class="sw cut-off"></i>suggested (off)</span>
+          <span><i class="sw gfx"></i>graphic</span>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><label>Original</label><b id="statOrig">–</b></div>
+        <div class="stat"><label>Edited</label><b id="statEdited" class="accent">–</b></div>
+        <div class="stat"><label>Removed</label><b id="statSaved">–</b></div>
+        <div class="stat"><label>Cuts</label><b id="statCuts">–</b></div>
+        <div class="stat"><label>Graphics</label><b id="statGfx">–</b></div>
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <nav class="tabs">
+        <button class="tab active" data-tab="cuts">Cuts</button>
+        <button class="tab" data-tab="gfx">Graphics</button>
+        <button class="tab" data-tab="script">Transcript</button>
+      </nav>
+      <div id="tab-cuts" class="tab-page active"><div id="cutsList"></div></div>
+      <div id="tab-gfx" class="tab-page"><div id="gfxList"></div></div>
+      <div id="tab-script" class="tab-page"><div id="transcriptList"></div></div>
+    </aside>
+  </main>
+
+  <div id="renderModal" class="modal hidden">
+    <div class="modal-card">
+      <h3 id="renderTitle">Rendering…</h3>
+      <div class="progress"><div id="renderBar" class="progress-bar"></div></div>
+      <div id="renderDetail" class="render-detail"></div>
+      <video id="renderPreview" class="hidden" controls></video>
+      <div class="modal-actions">
+        <button id="btnCancelRender" class="btn">Cancel</button>
+        <button id="btnCloseModal" class="btn hidden">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

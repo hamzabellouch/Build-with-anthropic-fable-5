@@ -1,0 +1,10 @@
+{
+  "name": "horizons-flight-simulator",
+  "version": "1.0.0",
+  "description": "A realistic browser flight simulator with full 6-DOF flight dynamics",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,2421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minecraft — Single File</title>
+<link rel="icon" href="data:,">
+<style>
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:'Segoe UI',system-ui,sans-serif;user-select:none;-webkit-user-select:none}
+  canvas{display:block}
+  #gl,#hud{position:fixed;inset:0;width:100%;height:100%}
+  #hud{pointer-events:none;z-index:2}
+  #vig{position:fixed;inset:0;z-index:3;pointer-events:none;background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,.34) 100%)}
+  #ui{position:fixed;inset:0;z-index:10;pointer-events:none}
+  .screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(10,10,14,.62);pointer-events:auto}
+  .hidden{display:none !important}
+  .mcfont{font-family:'Courier New',monospace;font-weight:bold;letter-spacing:1px}
+  h1.title{font-family:'Courier New',monospace;font-weight:bold;font-size:64px;margin:0 0 2px 0;color:#fff;letter-spacing:6px;text-shadow:5px 5px 0 #2a2a2e, -1px -1px 0 #888}
+  .subtitle{color:#cfcfcf;font-size:14px;margin-bottom:10px;text-shadow:2px 2px #111}
+  #splash{position:relative;top:-6px;color:#ffff55;font-family:'Courier New',monospace;font-weight:bold;font-size:16px;transform:rotate(-6deg);text-shadow:2px 2px #3a3a00;animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{transform:rotate(-6deg) scale(1)}50%{transform:rotate(-6deg) scale(1.07)}}
+  button.mc{font-family:'Courier New',monospace;font-weight:bold;font-size:17px;color:#fff;text-shadow:2px 2px #3f3f3f;width:340px;padding:11px 0;margin:3px;cursor:pointer;background:linear-gradient(#a8a8a8,#7c7c7c 45%,#6e6e6e);border:2px solid #000;box-shadow:inset 2px 2px 0 rgba(255,255,255,.45), inset -2px -2px 0 rgba(0,0,0,.45);outline:none}
+  button.mc:hover{background:linear-gradient(#b8c6e8,#8a98c0 45%,#7a88b0);border-color:#fff}
+  button.mc:active{box-shadow:inset -2px -2px 0 rgba(255,255,255,.35), inset 2px 2px 0 rgba(0,0,0,.45)}
+  .row{display:flex;align-items:center;gap:10px;color:#ddd;font-size:14px}
+  .row label{width:150px;text-align:right;font-family:'Courier New',monospace;font-weight:bold;text-shadow:1px 1px #222}
+  .row output{width:46px;font-family:'Courier New',monospace}
+  input[type=range]{width:210px;accent-color:#7da45a}
+  input[type=text]{font-family:'Courier New',monospace;font-weight:bold;font-size:16px;padding:8px;width:320px;background:#101013;color:#eee;border:2px solid #555;outline:none;text-align:center}
+  input[type=text]:focus{border-color:#aaa}
+  #controls{display:grid;grid-template-columns:auto auto;gap:3px 14px;margin-top:14px;color:#bbb;font-size:13px;font-family:'Courier New',monospace;text-shadow:1px 1px #111}
+  #controls b{color:#fff;text-align:right}
+  .foot{position:absolute;bottom:10px;color:#888;font-size:12px;font-family:'Courier New',monospace}
+  #loadbarWrap{width:420px;height:22px;border:2px solid #fff;background:#222;margin-top:8px}
+  #loadbar{height:100%;width:0%;background:linear-gradient(#8fce6a,#5a9c3a)}
+  #loadtext{color:#eee;font-family:'Courier New',monospace;font-weight:bold;text-shadow:2px 2px #222;font-size:18px}
+  #palWrap{background:rgba(22,22,26,.96);border:3px solid #000;box-shadow:inset 2px 2px 0 rgba(255,255,255,.25), inset -2px -2px 0 rgba(0,0,0,.5), 0 0 40px #000;padding:14px;display:flex;flex-direction:column;align-items:center;gap:8px}
+  #palTitle{color:#eee;font-family:'Courier New',monospace;font-weight:bold;font-size:18px;text-shadow:2px 2px #111}
+  #pal{image-rendering:pixelated;cursor:pointer}
+  #palName{color:#ffff88;font-family:'Courier New',monospace;font-weight:bold;font-size:15px;height:18px;text-shadow:1px 1px #111}
+  #err{background:rgba(40,0,0,.92);color:#ffb0b0;font-family:monospace;font-size:14px;padding:40px;align-items:flex-start;justify-content:flex-start;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="hud"></canvas>
+<div id="vig"></div>
+<div id="ui">
+  <div id="title" class="screen">
+    <h1 class="title">MINECRAFT</h1>
+    <div class="subtitle">single-file html edition &mdash; everything procedural, zero dependencies</div>
+    <div id="splash">Also try the real thing!</div>
+    <button class="mc" id="btnContinue">Continue World</button>
+    <button class="mc" id="btnNew">New World</button>
+    <input type="text" id="seed" placeholder="seed (blank = random)" spellcheck="false">
+    <div id="controls">
+      <b>W A S D</b><span>move</span>
+      <b>Mouse</b><span>look</span>
+      <b>Space</b><span>jump / swim</span>
+      <b>Space &times;2</b><span>toggle fly</span>
+      <b>W &times;2</b><span>sprint</span>
+      <b>Shift</b><span>sneak / fly down</span>
+      <b>Left click</b><span>mine</span>
+      <b>Right click</b><span>place</span>
+      <b>Middle click</b><span>pick block</span>
+      <b>1-9 / wheel</b><span>hotbar</span>
+      <b>E</b><span>block palette</span>
+      <b>G</b><span>debug info</span>
+      <b>M</b><span>mute &nbsp;&nbsp;<b style="color:#fff">[ ]</b> render distance</span>
+      <b>Esc</b><span>menu</span>
+    </div>
+    <div class="foot">one .html file &middot; raw WebGL &middot; generated textures &middot; saves to localStorage</div>
+  </div>
+  <div id="loading" class="screen hidden">
+    <div id="loadtext">Generating world&hellip;</div>
+    <div id="loadbarWrap"><div id="loadbar"></div></div>
+  </div>
+  <div id="pause" class="screen hidden">
+    <h1 class="title" style="font-size:38px">PAUSED</h1>
+    <button class="mc" id="btnResume">Back to Game</button>
+    <button class="mc" id="btnSave">Save World</button>
+    <button class="mc" id="btnQuit">Save &amp; Quit to Title</button>
+    <div class="row"><label>Render distance</label><input type="range" id="rngRD" min="3" max="9" step="1"><output id="outRD"></output></div>
+    <div class="row"><label>Mouse speed</label><input type="range" id="rngSens" min="0.3" max="2" step="0.05"><output id="outSens"></output></div>
+    <div class="row"><label>Volume</label><input type="range" id="rngVol" min="0" max="1" step="0.05"><output id="outVol"></output></div>
+    <div class="row"><label>Time of day</label><input type="range" id="rngTime" min="0" max="1" step="0.005"><output id="outTime"></output></div>
+  </div>
+  <div id="palette" class="screen hidden" style="background:rgba(10,10,14,.45)">
+    <div id="palWrap">
+      <div id="palTitle">Select Block &mdash; goes to active hotbar slot</div>
+      <canvas id="pal"></canvas>
+      <div id="palName"></div>
+    </div>
+  </div>
+  <div id="err" class="screen hidden"></div>
+</div>
+<script>
+"use strict";
+(() => {
+// ============================================================ constants / dom
+const CS = 16, H = 128, SEA = 32, DAYLEN = 600;
+const canvas = document.getElementById('gl');
+const hudC = document.getElementById('hud');
+const hctx = hudC.getContext('2d');
+const $ = id => document.getElementById(id);
+const UI = { title:$('title'), loading:$('loading'), pause:$('pause'), palette:$('palette'), err:$('err') };
+let MODE = 'title';            // title | loading | play | pause | palette
+const OPT = { rd:6, sens:1, vol:0.7, mute:false };
+
+// ============================================================ small math
+const clamp = (v,a,b) => v<a?a:(v>b?b:v);
+const clamp01 = v => v<0?0:(v>1?1:v);
+const lerp = (a,b,t) => a+(b-a)*t;
+const smoothstep = (a,b,x) => { const t = clamp01((x-a)/(b-a)); return t*t*(3-2*t); };
+const floor = Math.floor;
+
+// ---- mat4 (column major, WebGL style)
+function m4ident(o){ o.set([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]); return o; }
+function m4mul(o,a,b){ // o = a*b
+  const r = m4mul.t || (m4mul.t = new Float32Array(16));
+  for(let c=0;c<4;c++) for(let rI=0;rI<4;rI++){
+    r[c*4+rI] = a[0*4+rI]*b[c*4+0] + a[1*4+rI]*b[c*4+1] + a[2*4+rI]*b[c*4+2] + a[3*4+rI]*b[c*4+3];
+  }
+  o.set(r); return o;
+}
+function m4persp(o, fovy, asp, n, f){
+  const t = 1/Math.tan(fovy/2), d = 1/(n-f);
+  o.set([t/asp,0,0,0, 0,t,0,0, 0,0,(f+n)*d,-1, 0,0,2*f*n*d,0]); return o;
+}
+function m4rotX(o,a){ const c=Math.cos(a),s=Math.sin(a); o.set([1,0,0,0, 0,c,s,0, 0,-s,c,0, 0,0,0,1]); return o; }
+function m4rotY(o,a){ const c=Math.cos(a),s=Math.sin(a); o.set([c,0,-s,0, 0,1,0,0, s,0,c,0, 0,0,0,1]); return o; }
+function m4rotZ(o,a){ const c=Math.cos(a),s=Math.sin(a); o.set([c,s,0,0, -s,c,0,0, 0,0,1,0, 0,0,0,1]); return o; }
+function m4trans(o,x,y,z){ m4ident(o); o[12]=x; o[13]=y; o[14]=z; return o; }
+
+// frustum planes from proj*view
+const FR = new Float32Array(24);
+function frustumFrom(m){
+  for(let i=0;i<6;i++){
+    const r = i>>1, s = (i&1)?-1:1, o = i*4;
+    FR[o+0]=m[3]+s*m[0+r]; FR[o+1]=m[7]+s*m[4+r]; FR[o+2]=m[11]+s*m[8+r]; FR[o+3]=m[15]+s*m[12+r];
+    const l = Math.hypot(FR[o],FR[o+1],FR[o+2]) || 1;
+    FR[o]/=l; FR[o+1]/=l; FR[o+2]/=l; FR[o+3]/=l;
+  }
+}
+function boxVisible(x0,y0,z0,x1,y1,z1){
+  for(let i=0;i<6;i++){
+    const o=i*4, nx=FR[o], ny=FR[o+1], nz=FR[o+2];
+    const px = nx>0?x1:x0, py = ny>0?y1:y0, pz = nz>0?z1:z0;
+    if(nx*px+ny*py+nz*pz+FR[o+3] < 0) return false;
+  }
+  return true;
+}
+
+// ============================================================ rng / noise
+function mulberry32(a){ return function(){ a|=0; a = a+0x6D2B79F5|0; let t = Math.imul(a^a>>>15, 1|a); t = t+Math.imul(t^t>>>7, 61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function strHash(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+let SEED = 1;
+function setSeed(s){ SEED = s|0 || 1; }
+function h2(x,z){ let h = Math.imul(x,374761393) + Math.imul(z,668265263) + Math.imul(SEED,3266489917) | 0; h = Math.imul(h^h>>>13, 1274126177); return ((h^h>>>16)>>>0)/4294967296; }
+function h3(x,y,z){ let h = Math.imul(x,374761393) + Math.imul(y,2246822519) + Math.imul(z,668265263) + Math.imul(SEED,3266489917) | 0; h = Math.imul(h^h>>>13, 1274126177); return ((h^h>>>16)>>>0)/4294967296; }
+function vn2(x,z){
+  const ix=floor(x), iz=floor(z), fx=x-ix, fz=z-iz;
+  const sx=fx*fx*(3-2*fx), sz=fz*fz*(3-2*fz);
+  const a=h2(ix,iz), b=h2(ix+1,iz), c=h2(ix,iz+1), d=h2(ix+1,iz+1);
+  return lerp(lerp(a,b,sx), lerp(c,d,sx), sz);
+}
+function vn3(x,y,z){
+  const ix=floor(x), iy=floor(y), iz=floor(z), fx=x-ix, fy=y-iy, fz=z-iz;
+  const sx=fx*fx*(3-2*fx), sy=fy*fy*(3-2*fy), sz=fz*fz*(3-2*fz);
+  const a=lerp(h3(ix,iy,iz),   h3(ix+1,iy,iz),  sx), b=lerp(h3(ix,iy+1,iz),  h3(ix+1,iy+1,iz),  sx);
+  const c=lerp(h3(ix,iy,iz+1), h3(ix+1,iy,iz+1),sx), d=lerp(h3(ix,iy+1,iz+1),h3(ix+1,iy+1,iz+1),sx);
+  return lerp(lerp(a,b,sy), lerp(c,d,sy), sz);
+}
+function fbm2(x,z,oct){
+  let s=0, amp=1, tot=0;
+  for(let i=0;i<oct;i++){ s += vn2(x,z)*amp; tot+=amp; amp*=0.5; x*=2.03; z*=1.97; }
+  return s/tot;
+}
+function fbm3(x,y,z,oct){
+  let s=0, amp=1, tot=0;
+  for(let i=0;i<oct;i++){ s += vn3(x,y,z)*amp; tot+=amp; amp*=0.5; x*=2.01; y*=2.02; z*=1.98; }
+  return s/tot;
+}
+const ridge = n => 1-Math.abs(2*n-1);
+
+// packed world coords for light queues: exact integers below 2^53
+const POFF = 16384, PZW = 32768;
+const lpack = (x,y,z) => ((x+POFF)*PZW + (z+POFF))*128 + y;
+function lunpack(p, out){ const y = p%128; const q = (p-y)/128; const zz = q%PZW; out[0] = (q-zz)/PZW - POFF; out[1] = y; out[2] = zz - POFF; }
+
+// ============================================================ blocks
+// kind: 0 opaque cube, 1 cutout cube (leaves/glass), 2 water, 3 cross plant, 4 torch
+// t: [topTile, bottomTile, sideTile]; op: light opacity; hard: seconds to mine (-1 unbreakable)
+const A = { air:0, grass:1, dirt:2, stone:3, cobble:4, planks:5, log:6, leaves:7, sand:8, sandstone:9,
+            water:10, glass:11, brick:12, snow:13, snowgrass:14, gravel:15, bedrock:16,
+            coal:17, iron:18, gold:19, diamond:20, torch:21, tallgrass:22, dandelion:23, poppy:24, cactus:25 };
+const BLOCKS = [];
+function defB(id, name, t, o){
+  BLOCKS[id] = Object.assign({ name, t, kind:0, op:15, solid:true, same:false, emit:0, hard:1, mat:'stone', ao:true }, o);
+}
+defB(A.air,      'Air',          [0,0,0],    {kind:-1, op:0, solid:false, hard:-1, ao:false});
+defB(A.grass,    'Grass Block',  [0,2,1],    {hard:.45, mat:'grass'});
+defB(A.dirt,     'Dirt',         [2,2,2],    {hard:.4,  mat:'dirt'});
+defB(A.stone,    'Stone',        [3,3,3],    {hard:1.5});
+defB(A.cobble,   'Cobblestone',  [4,4,4],    {hard:1.6});
+defB(A.planks,   'Oak Planks',   [12,12,12], {hard:.9,  mat:'wood'});
+defB(A.log,      'Oak Log',      [11,11,10], {hard:.9,  mat:'wood'});
+defB(A.leaves,   'Oak Leaves',   [13,13,13], {kind:1, op:1, same:true, hard:.2, mat:'leaf'});
+defB(A.sand,     'Sand',         [6,6,6],    {hard:.4,  mat:'sand'});
+defB(A.sandstone,'Sandstone',    [8,8,7],    {hard:1.2});
+defB(A.water,    'Water',        [9,9,9],    {kind:2, op:2, solid:false, same:true, hard:-1, mat:'none', ao:false});
+defB(A.glass,    'Glass',        [14,14,14], {kind:1, op:0, same:true, hard:.3, mat:'glass', ao:false});
+defB(A.brick,    'Bricks',       [15,15,15], {hard:1.6});
+defB(A.snow,     'Snow Block',   [16,16,16], {hard:.3,  mat:'snow'});
+defB(A.snowgrass,'Snowy Grass',  [16,2,17],  {hard:.45, mat:'grass'});
+defB(A.gravel,   'Gravel',       [28,28,28], {hard:.45, mat:'dirt'});
+defB(A.bedrock,  'Bedrock',      [5,5,5],    {hard:-1});
+defB(A.coal,     'Coal Ore',     [18,18,18], {hard:1.9});
+defB(A.iron,     'Iron Ore',     [19,19,19], {hard:2});
+defB(A.gold,     'Gold Ore',     [20,20,20], {hard:2});
+defB(A.diamond,  'Diamond Ore',  [21,21,21], {hard:2.2});
+defB(A.torch,    'Torch',        [22,22,22], {kind:4, op:0, solid:false, emit:14, hard:.05, mat:'wood', ao:false});
+defB(A.tallgrass,'Tall Grass',   [23,23,23], {kind:3, op:0, solid:false, hard:.05, mat:'leaf', ao:false});
+defB(A.dandelion,'Dandelion',    [24,24,24], {kind:3, op:0, solid:false, hard:.05, mat:'leaf', ao:false});
+defB(A.poppy,    'Poppy',        [25,25,25], {kind:3, op:0, solid:false, hard:.05, mat:'leaf', ao:false});
+defB(A.cactus,   'Cactus',       [27,27,26], {hard:.4,  mat:'leaf'});
+const OPAC = new Uint8Array(BLOCKS.length), EMIT = new Uint8Array(BLOCKS.length), SOLID = new Uint8Array(BLOCKS.length);
+BLOCKS.forEach((b,i)=>{ OPAC[i]=b.op; EMIT[i]=b.emit; SOLID[i]=b.solid?1:0; });
+const isOpaque = id => OPAC[id]===15;
+const PALETTE_IDS = [A.grass,A.dirt,A.stone,A.cobble,A.planks,A.log,A.leaves,A.sand,A.sandstone,A.water,A.glass,A.brick,A.snow,A.snowgrass,A.gravel,A.bedrock,A.coal,A.iron,A.gold,A.diamond,A.torch,A.tallgrass,A.dandelion,A.poppy,A.cactus];
+
+// ============================================================ texture atlas (procedural, 16 tiles x 16 tiles of 16px)
+const ATLAS = document.createElement('canvas'); ATLAS.width = ATLAS.height = 256;
+const actx = ATLAS.getContext('2d', {willReadFrequently:true});
+const TILE = 16, UVT = 1/16, UVE = 1/1024;   // uv epsilon inset against bleeding
+
+// coarse smoothed noise grid (n x n random, bilinear upscaled to 16x16), wraps
+function coarse(r, n){
+  const g = new Float32Array(n*n);
+  for(let i=0;i<n*n;i++) g[i] = r();
+  return (x,y) => {
+    const fx = x/TILE*n, fy = y/TILE*n;
+    const ix = floor(fx)%n, iy = floor(fy)%n, jx = (ix+1)%n, jy = (iy+1)%n;
+    const tx = fx-floor(fx), ty = fy-floor(fy);
+    return lerp(lerp(g[iy*n+ix], g[iy*n+jx], tx), lerp(g[jy*n+ix], g[jy*n+jx], tx), ty);
+  };
+}
+function drawTile(tx, ty, fn){
+  const r = mulberry32(strHash('tile'+tx+'_'+ty));
+  const img = actx.createImageData(TILE, TILE);
+  const d = img.data;
+  const ctxObj = { r, c1: coarse(r,4), c2: coarse(r,8) };
+  for(let y=0;y<TILE;y++) for(let x=0;x<TILE;x++){
+    const c = fn(x, y, ctxObj);
+    const o = (y*TILE+x)*4;
+    d[o]=clamp(c[0],0,255); d[o+1]=clamp(c[1],0,255); d[o+2]=clamp(c[2],0,255); d[o+3]=c.length>3?clamp(c[3],0,255):255;
+  }
+  actx.putImageData(img, tx*TILE, ty*TILE);
+}
+const jit = (c, amp, r) => { const j = (r()-0.5)*2*amp; return [c[0]+j, c[1]+j, c[2]+j]; };
+
+function grassTopPx(x,y,c){ const p = jit([105,172,70], 15, c.r); if(c.r()<0.12){p[0]-=22;p[1]-=26;p[2]-=14;} return p; }
+function dirtPx(x,y,c){ const p = jit([136,98,69], 13, c.r); if(c.r()<0.1){p[0]-=24;p[1]-=20;p[2]-=14;} return p; }
+function sandPx(x,y,c){ const p = jit([219,206,160], 8, c.r); const v=c.c1(x,y); p[0]+=v*12-6;p[1]+=v*12-6;p[2]+=v*10-5; if(c.r()<0.05){p[0]-=30;p[1]-=28;p[2]-=24;} return p; }
+function stonePx(x,y,c){ const v = c.c1(x,y)*20-10 + c.c2(x,y)*10-5; const p=jit([127,127,130],6,c.r); return [p[0]+v,p[1]+v,p[2]+v]; }
+function snowPx(x,y,c){ const v=c.c1(x,y)*10; const p=jit([238,242,248],4,c.r); return [p[0]+v-5,p[1]+v-5,p[2]+v-4]; }
+
+function buildAtlas(){
+  actx.clearRect(0,0,256,256);
+  drawTile(0,0, grassTopPx);                                                     // 0 grass top
+  drawTile(1,0, (x,y,c)=>{                                                       // 1 grass side
+    const hgt = 3 + floor(h2(x*7+13, 5)*3);
+    if(y<hgt) return grassTopPx(x,y,c);
+    if(y===hgt) { const p=grassTopPx(x,y,c); return [p[0]-30,p[1]-34,p[2]-20]; }
+    return dirtPx(x,y,c);
+  });
+  drawTile(2,0, dirtPx);                                                         // 2 dirt
+  drawTile(3,0, stonePx);                                                        // 3 stone
+  drawTile(4,0, (x,y,c)=>{                                                       // 4 cobble (voronoi-ish)
+    let d1=99, d2=99, id=0;
+    for(let i=0;i<6;i++){
+      const px = h2(i,77)*16, py = h2(i,178)*16;
+      for(let wx=-16;wx<=16;wx+=16) for(let wy=-16;wy<=16;wy+=16){
+        const dd = Math.hypot(x-px+wx, y-py+wy);
+        if(dd<d1){ d2=d1; d1=dd; id=i; } else if(dd<d2) d2=dd;
+      }
+    }
+    if(d2-d1 < 1.5) return jit([72,72,74], 8, c.r);
+    const base = 105 + h2(id,99)*40;
+    const p = jit([base,base,base+3], 9, c.r);
+    return p;
+  });
+  drawTile(5,0, (x,y,c)=>{ const v = c.c1(x,y); const g = v<0.45? 38 : (v<0.7? 75 : 110); return jit([g,g,g+2], 12, c.r); }); // 5 bedrock
+  drawTile(6,0, sandPx);                                                         // 6 sand
+  drawTile(7,0, (x,y,c)=>{ const p = sandPx(x,y,c); if(y===3||y===8||y===12){p[0]-=20;p[1]-=20;p[2]-=18;} if(y===0){p[0]+=10;p[1]+=10;p[2]+=8;} return p; }); // 7 sandstone side
+  drawTile(8,0, (x,y,c)=>{ const p = sandPx(x,y,c); return [p[0]-6,p[1]-6,p[2]-6]; });   // 8 sandstone top
+  drawTile(9,0, (x,y,c)=>{                                                       // 9 water
+    const v = c.c1(x,y)*26 + c.c2((x*2)%16,y)*10;
+    return [38+v, 92+v, 190+v*0.8, 188];
+  });
+  drawTile(10,0,(x,y,c)=>{                                                       // 10 log side
+    const col = h2(x,1234);
+    const base = 96 + col*30;
+    const p = jit([base, base*0.76, base*0.45], 7, c.r);
+    if(col<0.18){p[0]-=26;p[1]-=20;p[2]-=12;}
+    return p;
+  });
+  drawTile(11,0,(x,y,c)=>{                                                       // 11 log top (rings)
+    const d = Math.max(Math.abs(x-7.5), Math.abs(y-7.5));
+    if(d>6.5){ const p=jit([108,84,50],8,c.r); return p; }
+    const ring = floor(d)%2===0;
+    return jit(ring?[186,152,98]:[150,118,72], 7, c.r);
+  });
+  drawTile(12,0,(x,y,c)=>{                                                       // 12 planks
+    const board = floor(y/4);
+    const base = 165 + (h2(board,55)-0.5)*26;
+    const p = jit([base, base*0.78, base*0.47], 7, c.r);
+    if(y%4===0){ p[0]-=42;p[1]-=36;p[2]-=22; }
+    const seam = floor(h2(board,99)*16);
+    if(x===seam){ p[0]-=34;p[1]-=28;p[2]-=18; }
+    return p;
+  });
+  drawTile(13,0,(x,y,c)=>{                                                       // 13 leaves (cutout)
+    const v = c.c2(x,y);
+    if(v < 0.28) return [0,0,0,0];
+    const p = jit([56,124,40], 17, c.r);
+    if(v>0.75){p[0]+=18;p[1]+=22;p[2]+=10;}
+    return [p[0],p[1],p[2],255];
+  });
+  drawTile(14,0,(x,y,c)=>{                                                       // 14 glass (cutout)
+    if(x===0||y===0||x===15||y===15) return [210,228,235,255];
+    if((x===1&&y===1)||(x===2&&y===1)||(x===1&&y===2)) return [255,255,255,255];
+    const dg = x+y;
+    if(dg>=18 && dg<=20 && x>4) return [235,245,250,255];
+    return [0,0,0,0];
+  });
+  drawTile(15,0,(x,y,c)=>{                                                       // 15 brick
+    const row = floor(y/4);
+    if(y%4===3) return jit([168,168,168], 9, c.r);
+    const off = row%2 ? 4 : 0;
+    if((x+off)%8===7) return jit([168,168,168], 9, c.r);
+    const bi = floor((x+off)/8) + row*3;
+    const base = h2(bi,321);
+    return jit([148+base*24, 66+base*14, 56+base*10], 8, c.r);
+  });
+  drawTile(16,0, snowPx);                                                        // 16 snow
+  drawTile(17,0,(x,y,c)=>{                                                       // 17 snowy grass side
+    const hgt = 3 + floor(h2(x*3+5, 17)*3);
+    if(y<hgt) return snowPx(x,y,c);
+    return dirtPx(x,y,c);
+  });
+  const orePx = (mineral, bright) => (x,y,c) => {
+    for(let i=0;i<5;i++){
+      const px = 2+h2(i,431)*12, py = 2+h2(i,761)*12;
+      const d = Math.abs(x-px)+Math.abs(y-py);
+      if(d<1.6) return jit(d<0.7?bright:mineral, 10, c.r);
+    }
+    return stonePx(x,y,c);
+  };
+  drawTile(2,1, orePx([42,42,46],[70,70,74]));                                   // 18 coal
+  drawTile(3,1, orePx([205,158,128],[235,196,170]));                             // 19 iron
+  drawTile(4,1, orePx([248,206,68],[255,238,140]));                              // 20 gold
+  drawTile(5,1, orePx([90,220,210],[170,250,245]));                              // 21 diamond
+  drawTile(6,1,(x,y,c)=>{                                                        // 22 torch
+    if(x===7||x===8){
+      if(y>=6&&y<=15) return jit([126,96,56], 9, c.r);
+      if(y===5) return [255,216,98,255];
+      if(y===4) return [255,160,40,255];
+    }
+    if((x===6||x===9)&&y===5) return [255,140,30,200];
+    return [0,0,0,0];
+  });
+  drawTile(7,1,(x,y,c)=>{                                                        // 23 tall grass
+    const col = h2(x,888);
+    if(col<0.45){
+      const hgt = 4 + col*22;
+      if(15-y <= hgt){ const p = jit([88,150,52], 16, c.r); return [p[0],p[1],p[2],255]; }
+    }
+    return [0,0,0,0];
+  });
+  const flower = headCol => (x,y,c)=>{
+    if(x===8 && y>=8 && y<=15) return [70,130,46,255];
+    if(x===7 && y===11) return [70,130,46,255];
+    if(x>=7&&x<=9 && y>=5&&y<=7){
+      if(x===8&&y===6) return [255,250,190,255];
+      return [headCol[0],headCol[1],headCol[2],255];
+    }
+    return [0,0,0,0];
+  };
+  drawTile(8,1, flower([252,218,60]));                                           // 24 dandelion
+  drawTile(9,1, flower([214,44,40]));                                            // 25 poppy
+  drawTile(10,1,(x,y,c)=>{                                                       // 26 cactus side
+    if(x===0||x===15) return jit([60,92,38], 6, c.r);
+    const p = jit([86,134,56], 9, c.r);
+    if(x%5===2 && y%4===1) return [210,226,176,255];
+    return p;
+  });
+  drawTile(11,1,(x,y,c)=>{                                                       // 27 cactus top
+    if(x<2||x>13||y<2||y>13) return jit([60,92,38], 6, c.r);
+    return jit([96,146,62], 8, c.r);
+  });
+  drawTile(12,1,(x,y,c)=>{                                                       // 28 gravel
+    const v = c.c2(x,y);
+    const p = v<0.5 ? jit([134,124,118],10,c.r) : jit([105,94,88],10,c.r);
+    if(c.r()<0.06) return [165,158,150];
+    return p;
+  });
+  for(let s=0;s<5;s++){                                                          // 29..33 cracks (tiles (13,1)..(1,2))
+    const tx = (13+s)%16, ty = 1+floor((13+s)/16);
+    drawTile(tx,ty,(x,y,c)=>{
+      const rr = mulberry32(strHash('crack'+s));
+      for(let k=0;k<3+s*2;k++){
+        let cx2 = 3+rr()*10, cy2 = 3+rr()*10;
+        for(let st=0; st<4+s*2; st++){
+          if(Math.abs(x-floor(cx2))<1 && Math.abs(y-floor(cy2))<1) return [12,12,12, 150+s*16];
+          cx2 += (rr()-0.5)*4; cy2 += (rr()-0.5)*4;
+        }
+      }
+      return [0,0,0,0];
+    });
+  }
+  drawTile(2,2,(x,y,c)=>{                                                        // 34 sun
+    const d = Math.max(Math.abs(x-7.5), Math.abs(y-7.5));
+    if(d>6) return [0,0,0,0];
+    if(d>5) return [255,228,120,210];
+    return [255,250,224,255];
+  });
+  drawTile(3,2,(x,y,c)=>{                                                        // 35 moon
+    const d = Math.max(Math.abs(x-7.5), Math.abs(y-7.5));
+    if(d>5) return [0,0,0,0];
+    const cr = (h2(x,y)<0.18);
+    return cr ? [176,182,196,255] : [222,226,236,255];
+  });
+}
+const TILE_CRACK0 = 29, TILE_SUN = 34, TILE_MOON = 35;
+const tileUV = t => [ (t%16)*UVT, floor(t/16)*UVT ];
+
+// water animation frames (re-stamped into atlas periodically)
+const waterFrames = [];
+function buildWaterFrames(){
+  const c = document.createElement('canvas'); c.width=c.height=16;
+  const cc = c.getContext('2d');
+  for(let f=0; f<4; f++){
+    const r = mulberry32(strHash('water'+f));
+    const cn = coarse(mulberry32(strHash('waterc')), 4);
+    const img = cc.createImageData(16,16);
+    for(let y=0;y<16;y++) for(let x=0;x<16;x++){
+      const v = cn((x+f*4)%16, y)*26 + cn((x*2+f*8)%16, (y+f*2)%16)*10;
+      const o=(y*16+x)*4;
+      img.data[o]=38+v+(r()-0.5)*8; img.data[o+1]=92+v; img.data[o+2]=190+v*0.8; img.data[o+3]=188;
+    }
+    cc.putImageData(img,0,0);
+    const f2 = document.createElement('canvas'); f2.width=f2.height=16;
+    f2.getContext('2d').drawImage(c,0,0);
+    waterFrames.push(f2);
+  }
+}
+let waterFrameI = 0, waterTimer = 0;
+
+// cloud texture: 64x64, wrapping blobs
+const CLOUDC = document.createElement('canvas'); CLOUDC.width = CLOUDC.height = 64;
+function buildClouds(){
+  const cc = CLOUDC.getContext('2d');
+  const r = mulberry32(strHash('clouds'));
+  const n=8, g=new Float32Array(n*n);
+  for(let i=0;i<n*n;i++) g[i]=r();
+  const img = cc.createImageData(64,64);
+  for(let y=0;y<64;y++) for(let x=0;x<64;x++){
+    let v=0, amp=1, fx=x/64, fy=y/64, tot=0;
+    for(let o=0;o<3;o++){
+      const sc = n*(1<<o);
+      const gx=fx*sc, gy=fy*sc;
+      const ix=floor(gx)%n, iy=floor(gy)%n, jx=(ix+1)%n, jy=(iy+1)%n;
+      const tx=gx-floor(gx), ty=gy-floor(gy);
+      v += lerp(lerp(g[iy*n+ix],g[iy*n+jx],tx), lerp(g[jy*n+ix],g[jy*n+jx],tx), ty)*amp;
+      tot+=amp; amp*=0.5;
+    }
+    v/=tot;
+    const o=(y*64+x)*4;
+    img.data[o]=img.data[o+1]=img.data[o+2]=255;
+    img.data[o+3] = v>0.60 ? 215 : 0;
+  }
+  cc.putImageData(img,0,0);
+}
+
+// ============================================================ block icons (pseudo-iso), cached sprite sheet
+const ICON = 40;
+const ICONS = document.createElement('canvas');
+const shadeCache = new Map();
+function shadedTile(t, amt){
+  const k = t+'_'+amt;
+  if(shadeCache.has(k)) return shadeCache.get(k);
+  const c = document.createElement('canvas'); c.width=c.height=16;
+  const cc = c.getContext('2d');
+  cc.drawImage(ATLAS, (t%16)*16, floor(t/16)*16, 16,16, 0,0,16,16);
+  cc.globalCompositeOperation = 'source-atop';
+  cc.fillStyle = 'rgba(0,0,0,'+amt+')';
+  cc.fillRect(0,0,16,16);
+  shadeCache.set(k,c);
+  return c;
+}
+function buildIcons(){
+  ICONS.width = ICON*BLOCKS.length; ICONS.height = ICON;
+  const cc = ICONS.getContext('2d');
+  cc.imageSmoothingEnabled = false;
+  const s = ICON;
+  for(let id=1; id<BLOCKS.length; id++){
+    const b = BLOCKS[id], ox = id*ICON;
+    if(b.kind===3 || b.kind===4 || b.kind===2){      // flat icon
+      cc.drawImage(shadedTile(b.t[2],0), 0,0,16,16, ox+4,4, s-8,s-8);
+      continue;
+    }
+    const top = shadedTile(b.t[0], 0), left = shadedTile(b.t[2], 0.22), right = shadedTile(b.t[2], 0.42);
+    const w = s*0.46, hh = s*0.23, fh = s*0.5;       // half width, quarter height, face height
+    const Tx = ox+s/2, Ty = 2;
+    cc.setTransform(w/16, hh/16, -w/16, hh/16, Tx, Ty);          // top diamond
+    cc.drawImage(top, 0,0);
+    cc.setTransform(w/16, hh/16, 0, fh/16, Tx-w, Ty+hh);         // left face
+    cc.drawImage(left, 0,0);
+    cc.setTransform(w/16, -hh/16, 0, fh/16, Tx, Ty+2*hh);        // right face
+    cc.drawImage(right, 0,0);
+    cc.setTransform(1,0,0,1,0,0);
+  }
+}
+function drawIcon(ctx2, id, x, y, size){
+  ctx2.drawImage(ICONS, id*ICON, 0, ICON, ICON, x, y, size, size);
+}
+// ============================================================ world storage
+const W = {
+  chunks: new Map(),     // "cx,cz" -> chunk
+  edits:  new Map(),     // "cx,cz" -> Map(idx -> id), player modifications (saved)
+  time: 0.30 * DAYLEN,   // morning
+  editsDirty: false,
+};
+const cKey = (cx,cz) => cx+','+cz;
+const chunkAt = (cx,cz) => W.chunks.get(cKey(cx,cz));
+const cIdx = (lx,y,lz) => (y<<8) | (lz<<4) | lx;     // y*256 + z*16 + x
+
+function newChunk(cx,cz){
+  return { cx, cz,
+    b:  new Uint8Array(CS*CS*H),    // block ids
+    sk: new Uint8Array(CS*CS*H),    // sky light 0..15
+    bl: new Uint8Array(CS*CS*H),    // block (torch) light 0..15
+    hm: new Uint8Array(CS*CS),      // highest opaque + 1
+    gen:false, dirty:false,
+    vboS:null, nS:0, vboW:null, nW:0, meshed:false,
+  };
+}
+function getB(x,y,z){
+  if(y<0 || y>=H) return A.air;
+  const ch = chunkAt(x>>4, z>>4);
+  return ch && ch.gen ? ch.b[cIdx(x&15, y, z&15)] : A.air;
+}
+function getSky(x,y,z){
+  if(y>=H) return 15;
+  if(y<0) return 0;
+  const ch = chunkAt(x>>4, z>>4);
+  return ch && ch.gen ? ch.sk[cIdx(x&15,y,z&15)] : 0;
+}
+function getBlkL(x,y,z){
+  if(y<0||y>=H) return 0;
+  const ch = chunkAt(x>>4, z>>4);
+  return ch && ch.gen ? ch.bl[cIdx(x&15,y,z&15)] : 0;
+}
+function markDirty(cx,cz){
+  const ch = chunkAt(cx,cz);
+  if(ch && ch.gen) ch.dirty = true;
+}
+function markDirtyAround(x,z){
+  const cx = x>>4, cz = z>>4, lx = x&15, lz = z&15;
+  markDirty(cx,cz);
+  if(lx===0) markDirty(cx-1,cz); if(lx===15) markDirty(cx+1,cz);
+  if(lz===0) markDirty(cx,cz-1); if(lz===15) markDirty(cx,cz+1);
+  if(lx===0&&lz===0) markDirty(cx-1,cz-1);   if(lx===15&&lz===0) markDirty(cx+1,cz-1);
+  if(lx===0&&lz===15) markDirty(cx-1,cz+1);  if(lx===15&&lz===15) markDirty(cx+1,cz+1);
+}
+
+// ============================================================ light engine (BFS, sky + block channels)
+// queues hold packed positions; removal queues hold pos*16+oldLight
+const qSA=[], qSR=[], qBA=[], qBR=[];
+let hSA=0, hSR=0, hBA=0, hBR=0;
+const DIRS = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+const _lu = [0,0,0];
+
+function lightGet(arrName,x,y,z){
+  if(y<0||y>=H) return arrName==='sk' && y>=H ? 15 : 0;
+  const ch = chunkAt(x>>4,z>>4);
+  return ch && ch.gen ? ch[arrName][cIdx(x&15,y,z&15)] : -1;   // -1 = not loaded
+}
+function lightSet(arrName,x,y,z,v){
+  const ch = chunkAt(x>>4,z>>4);
+  if(!ch || !ch.gen) return false;
+  ch[arrName][cIdx(x&15,y,z&15)] = v;
+  markDirtyAround(x,z);
+  return true;
+}
+function processLight(maxOps){
+  let ops = 0;
+  // ---- removals (sky)
+  while(hSR < qSR.length && ops < maxOps){
+    const e = qSR[hSR++]; ops++;
+    const val = e % 16, pos = (e-val)/16;
+    lunpack(pos,_lu); const x=_lu[0], y=_lu[1], z=_lu[2];
+    for(let d=0;d<6;d++){
+      const nx=x+DIRS[d][0], ny=y+DIRS[d][1], nz=z+DIRS[d][2];
+      if(ny<0||ny>=H) continue;
+      const cur = lightGet('sk',nx,ny,nz);
+      if(cur<=0) continue;
+      const down = (d===3);
+      if(cur < val || (down && val===15 && cur===15)){
+        lightSet('sk',nx,ny,nz,0);
+        qSR.push(lpack(nx,ny,nz)*16 + cur);
+      } else {
+        qSA.push(lpack(nx,ny,nz));
+      }
+    }
+  }
+  // ---- removals (block)
+  while(hBR < qBR.length && ops < maxOps){
+    const e = qBR[hBR++]; ops++;
+    const val = e % 16, pos = (e-val)/16;
+    lunpack(pos,_lu); const x=_lu[0], y=_lu[1], z=_lu[2];
+    for(let d=0;d<6;d++){
+      const nx=x+DIRS[d][0], ny=y+DIRS[d][1], nz=z+DIRS[d][2];
+      if(ny<0||ny>=H) continue;
+      const cur = lightGet('bl',nx,ny,nz);
+      if(cur<=0) continue;
+      if(cur < val){
+        lightSet('bl',nx,ny,nz,0);
+        qBR.push(lpack(nx,ny,nz)*16 + cur);
+      } else {
+        qBA.push(lpack(nx,ny,nz));
+      }
+    }
+  }
+  // ---- additions (sky)
+  while(hSA < qSA.length && ops < maxOps){
+    const pos = qSA[hSA++]; ops++;
+    lunpack(pos,_lu); const x=_lu[0], y=_lu[1], z=_lu[2];
+    const v = lightGet('sk',x,y,z);
+    if(v<=1) continue;
+    for(let d=0;d<6;d++){
+      const nx=x+DIRS[d][0], ny=y+DIRS[d][1], nz=z+DIRS[d][2];
+      if(ny<0||ny>=H) continue;
+      const ch = chunkAt(nx>>4,nz>>4);
+      if(!ch || !ch.gen) continue;
+      const ni = cIdx(nx&15,ny,nz&15);
+      const op = OPAC[ch.b[ni]];
+      if(op>=15) continue;
+      const down = (d===3);
+      const tv = (down && v===15 && op===0) ? 15 : v-1-op;
+      if(tv > ch.sk[ni]){
+        ch.sk[ni] = tv;
+        markDirtyAround(nx,nz);
+        qSA.push(lpack(nx,ny,nz));
+      }
+    }
+  }
+  // ---- additions (block)
+  while(hBA < qBA.length && ops < maxOps){
+    const pos = qBA[hBA++]; ops++;
+    lunpack(pos,_lu); const x=_lu[0], y=_lu[1], z=_lu[2];
+    const v = lightGet('bl',x,y,z);
+    if(v<=1) continue;
+    for(let d=0;d<6;d++){
+      const nx=x+DIRS[d][0], ny=y+DIRS[d][1], nz=z+DIRS[d][2];
+      if(ny<0||ny>=H) continue;
+      const ch = chunkAt(nx>>4,nz>>4);
+      if(!ch || !ch.gen) continue;
+      const ni = cIdx(nx&15,ny,nz&15);
+      const op = OPAC[ch.b[ni]];
+      if(op>=15) continue;
+      const tv = v-1-op;
+      if(tv > ch.bl[ni]){
+        ch.bl[ni] = tv;
+        markDirtyAround(nx,nz);
+        qBA.push(lpack(nx,ny,nz));
+      }
+    }
+  }
+  // compact queues occasionally
+  if(hSA>8192){ qSA.splice(0,hSA); hSA=0; } if(hSR>8192){ qSR.splice(0,hSR); hSR=0; }
+  if(hBA>8192){ qBA.splice(0,hBA); hBA=0; } if(hBR>8192){ qBR.splice(0,hBR); hBR=0; }
+  return ops;
+}
+const lightPending = () => (qSA.length-hSA)+(qSR.length-hSR)+(qBA.length-hBA)+(qBR.length-hBR);
+
+function seedChunkLight(ch){
+  const bx = ch.cx*16, bz = ch.cz*16;
+  // 1. vertical sunlight columns
+  for(let lz=0;lz<16;lz++) for(let lx=0;lx<16;lx++){
+    let y = H-1;
+    for(; y>=0; y--){
+      const id = ch.b[cIdx(lx,y,lz)];
+      const op = OPAC[id];
+      if(op===0){ ch.sk[cIdx(lx,y,lz)] = 15; continue; }
+      if(op<15){  // translucent (water/leaves): set reduced value, hand off to BFS
+        ch.sk[cIdx(lx,y,lz)] = 15-op;
+        qSA.push(lpack(bx+lx, y, bz+lz));
+      }
+      break;
+    }
+    ch.hm[lz*16+lx] = y+1;
+  }
+  // 2. emitters + frontier cells (lit cells adjacent to in-chunk darkness)
+  for(let y=0;y<H;y++) for(let lz=0;lz<16;lz++) for(let lx=0;lx<16;lx++){
+    const i = cIdx(lx,y,lz);
+    const id = ch.b[i];
+    if(EMIT[id]>0){ ch.bl[i] = EMIT[id]; qBA.push(lpack(bx+lx,y,bz+lz)); }
+    if(ch.sk[i]===15){
+      if((lx>0    && ch.sk[i-1]===0   && OPAC[ch.b[i-1]]<15) ||
+         (lx<15   && ch.sk[i+1]===0   && OPAC[ch.b[i+1]]<15) ||
+         (lz>0    && ch.sk[i-16]===0  && OPAC[ch.b[i-16]]<15) ||
+         (lz<15   && ch.sk[i+16]===0  && OPAC[ch.b[i+16]]<15)){
+        qSA.push(lpack(bx+lx,y,bz+lz));
+      }
+    }
+  }
+  // 3. seed across borders with already-generated neighbours (both directions)
+  const sides = [[1,0],[-1,0],[0,1],[0,-1]];
+  for(const [dx,dz] of sides){
+    const nb = chunkAt(ch.cx+dx, ch.cz+dz);
+    if(!nb || !nb.gen) continue;
+    for(let t=0;t<16;t++){
+      const lx  = dx===1?15 : dx===-1?0  : t;
+      const lz  = dz===1?15 : dz===-1?0  : t;
+      const nlx = dx===1?0  : dx===-1?15 : t;
+      const nlz = dz===1?0  : dz===-1?15 : t;
+      for(let y=0;y<H;y++){
+        const a = ch.sk[cIdx(lx,y,lz)], b = nb.sk[cIdx(nlx,y,nlz)];
+        if(a>b+1) qSA.push(lpack(bx+lx,y,bz+lz));
+        else if(b>a+1) qSA.push(lpack((ch.cx+dx)*16+nlx, y, (ch.cz+dz)*16+nlz));
+        const ab = ch.bl[cIdx(lx,y,lz)], bb = nb.bl[cIdx(nlx,y,nlz)];
+        if(ab>bb+1) qBA.push(lpack(bx+lx,y,bz+lz));
+        else if(bb>ab+1) qBA.push(lpack((ch.cx+dx)*16+nlx, y, (ch.cz+dz)*16+nlz));
+      }
+    }
+  }
+}
+
+// ============================================================ setBlock + light bookkeeping
+function setB(x,y,z,id,fromPlayer){
+  if(y<0||y>=H) return false;
+  const cx = x>>4, cz = z>>4;
+  const ch = chunkAt(cx,cz);
+  if(!ch || !ch.gen) return false;
+  const i = cIdx(x&15,y,z&15);
+  const old = ch.b[i];
+  if(old===id) return false;
+  ch.b[i] = id;
+  // --- lighting
+  const s = ch.sk[i];
+  if(s>0){ ch.sk[i]=0; qSR.push(lpack(x,y,z)*16+s); }
+  const bl = ch.bl[i];
+  if(bl>0){ ch.bl[i]=0; qBR.push(lpack(x,y,z)*16+bl); }
+  if(EMIT[id]>0){ ch.bl[i]=EMIT[id]; qBA.push(lpack(x,y,z)); }
+  for(let d=0;d<6;d++){
+    const nx=x+DIRS[d][0], ny=y+DIRS[d][1], nz=z+DIRS[d][2];
+    if(ny<0||ny>=H) continue;
+    qSA.push(lpack(nx,ny,nz));
+    qBA.push(lpack(nx,ny,nz));
+  }
+  markDirtyAround(x,z);
+  // --- record player edits for saving
+  if(fromPlayer){
+    const k = cKey(cx,cz);
+    let m = W.edits.get(k);
+    if(!m){ m = new Map(); W.edits.set(k,m); }
+    m.set(i, id);
+    W.editsDirty = true;
+  }
+  return true;
+}
+
+// ============================================================ terrain generation
+function terrainCol(x,z){
+  const str = (n,k) => clamp01(0.5+(n-0.5)*k);     // widen averaged-fbm distributions
+  const cont = str(fbm2(x*0.0023+31.7, z*0.0023-19.3, 4), 2.0);
+  const mMask = smoothstep(0.50, 0.74, str(fbm2(x*0.0009-1234.5, z*0.0009+999.1, 3), 2.2));
+  const ridges = ridge(str(fbm2(x*0.0014+777.7, z*0.0014-333.3, 3), 2.2));
+  const rough = fbm2(x*0.013+55.5, z*0.013-77.7, 3);
+  let h = 35 + (cont-0.5)*45 + (rough-0.5)*10 + ridges*ridges*60*mMask;
+  h = clamp(floor(h), 4, H-30);
+  let temp = str(fbm2(x*0.0016+9100.3, z*0.0016+411.7, 3), 1.8) - Math.max(0,h-64)*0.008;
+  const moist = str(fbm2(x*0.0018-5555.1, z*0.0018+2222.9, 3), 1.8);
+  let biome;
+  if(h <= SEA+1) biome = 'beach';
+  else if(temp < 0.34) biome = 'snow';
+  else if(temp > 0.60 && moist < 0.45) biome = 'desert';
+  else if(h > 74) biome = 'mountain';
+  else if(moist > 0.54) biome = 'forest';
+  else biome = 'plains';
+  return { h, biome };
+}
+
+function genChunk(ch){
+  const cx = ch.cx, cz = ch.cz, b = ch.b;
+  const heights = new Int16Array(256), biomes = new Array(256);
+  // ---- columns
+  for(let lz=0;lz<16;lz++) for(let lx=0;lx<16;lx++){
+    const x = cx*16+lx, z = cz*16+lz;
+    const tc = terrainCol(x,z);
+    const h = tc.h, biome = tc.biome;
+    heights[lz*16+lx] = h; biomes[lz*16+lx] = biome;
+    for(let y=0; y<=h; y++){
+      let id = A.stone;
+      const d = h-y;
+      if(biome==='desert' || biome==='beach'){
+        if(d===0) id = h<SEA-4 ? (h2(x*3,z*3)<0.5?A.gravel:A.sand) : A.sand;
+        else if(d<4) id = A.sand;
+        else if(d<7) id = A.sandstone;
+      } else if(biome==='snow'){
+        if(d===0) id = A.snowgrass;
+        else if(d<4) id = A.dirt;
+      } else if(biome==='mountain'){
+        if(h>86 && d===0) id = A.snow;
+        else if(d===0 && h<=78) id = A.grass;
+        else if(d<3 && h<=78) id = A.dirt;
+      } else {
+        if(d===0) id = A.grass;
+        else if(d<4) id = A.dirt;
+      }
+      b[cIdx(lx,y,lz)] = id;
+    }
+    for(let y=h+1; y<=SEA; y++) b[cIdx(lx,y,lz)] = A.water;
+  }
+  // ---- caves (3D noise sampled on a 4x4x4 grid, trilinearly interpolated)
+  const gx = 5, gyN = floor(H/4)+1;
+  const n1g = new Float32Array(gx*gx*gyN), n2g = new Float32Array(gx*gx*gyN), n3g = new Float32Array(gx*gx*gyN);
+  for(let gyi=0; gyi<gyN; gyi++) for(let gzi=0; gzi<gx; gzi++) for(let gxi=0; gxi<gx; gxi++){
+    const wx=(cx*16+gxi*4), wy=gyi*4, wz=(cz*16+gzi*4);
+    const gi = (gyi*gx+gzi)*gx+gxi;
+    n1g[gi] = fbm3(wx*0.021+91, wy*0.03, wz*0.021-17, 2);
+    n2g[gi] = fbm3(wx*0.021-313, wy*0.03+99, wz*0.021+541, 2);
+    n3g[gi] = fbm3(wx*0.014+1777, wy*0.02+55, wz*0.014-888, 2);
+  }
+  const tri = (g, lx,y,lz) => {
+    const fx=lx/4, fy=y/4, fz=lz/4;
+    const x0=floor(fx), y0=floor(fy), z0=floor(fz);
+    const tx=fx-x0, ty=fy-y0, tz=fz-z0;
+    const i000=(y0*gx+z0)*gx+x0;
+    const a=lerp(g[i000],g[i000+1],tx), bq=lerp(g[i000+gx],g[i000+gx+1],tx);
+    const c=lerp(g[i000+gx*gx],g[i000+gx*gx+1],tx), dq=lerp(g[i000+gx*gx+gx],g[i000+gx*gx+gx+1],tx);
+    return lerp(lerp(a,bq,ty), lerp(c,dq,ty), tz);
+  };
+  for(let lz=0;lz<16;lz++) for(let lx=0;lx<16;lx++){
+    const h = heights[lz*16+lx];
+    const underwater = h < SEA+1;
+    const yMax = underwater ? h-7 : h;
+    for(let y=3; y<=yMax; y++){
+      const v1=tri(n1g,lx,y,lz), v2=tri(n2g,lx,y,lz);
+      const w = 0.042 + (1 - y/H)*0.012;
+      let carve = Math.abs(v1-0.5)<w && Math.abs(v2-0.5)<w;
+      if(!carve && y<40) carve = tri(n3g,lx,y,lz) > 0.76;
+      if(carve) b[cIdx(lx,y,lz)] = A.air;
+    }
+  }
+  // ---- bedrock
+  for(let lz=0;lz<16;lz++) for(let lx=0;lx<16;lx++){
+    b[cIdx(lx,0,lz)] = A.bedrock;
+    if(h2(cx*16+lx, cz*16+lz) < 0.5) b[cIdx(lx,1,lz)] = A.bedrock;
+  }
+  // ---- ores
+  const rng = mulberry32((Math.imul(cx,73856093) ^ Math.imul(cz,19349663) ^ SEED)>>>0);
+  const vein = (id, count, size, yMin, yMax) => {
+    for(let v=0;v<count;v++){
+      let x = rng()*16, y = yMin+rng()*(yMax-yMin), z = rng()*16;
+      for(let s=0;s<size;s++){
+        const ix=floor(x), iy=floor(y), iz=floor(z);
+        if(ix>=0&&ix<16&&iz>=0&&iz<16&&iy>0&&iy<H && b[cIdx(ix,iy,iz)]===A.stone) b[cIdx(ix,iy,iz)] = id;
+        x+=rng()*2-1; y+=rng()*2-1; z+=rng()*2-1;
+      }
+    }
+  };
+  vein(A.coal, 10, 8, 6, 70); vein(A.iron, 7, 6, 4, 48);
+  vein(A.gold, 3, 5, 4, 26);  vein(A.diamond, 2, 5, 4, 14);
+  vein(A.gravel, 4, 9, 10, 55);
+  // ---- decorations
+  const setIfAir = (lx,y,lz,id) => { if(lx>=0&&lx<16&&lz>=0&&lz<16&&y>0&&y<H && b[cIdx(lx,y,lz)]===A.air) b[cIdx(lx,y,lz)]=id; };
+  for(let lz=0;lz<16;lz++) for(let lx=0;lx<16;lx++){
+    const x=cx*16+lx, z=cz*16+lz;
+    const h = heights[lz*16+lx], biome = biomes[lz*16+lx];
+    const top = b[cIdx(lx,h,lz)];
+    if(b[cIdx(lx,h+1,lz)]!==A.air) continue;            // carved or submerged
+    const r1 = h2(x*5+11, z*5-7), r2 = h2(x*9-3, z*9+13);
+    if((top===A.grass || top===A.snowgrass) && lx>=2 && lx<=13 && lz>=2 && lz<=13){
+      const dens = biome==='forest'?0.022 : biome==='plains'?0.004 : biome==='snow'?0.007 : 0;
+      if(r1 < dens && h+8 < H){
+        const th = 4 + floor(r2*3);
+        for(let dy=th-2; dy<=th+1; dy++){
+          const rad = dy>=th ? 1 : 2;
+          for(let ox=-rad;ox<=rad;ox++) for(let oz=-rad;oz<=rad;oz++){
+            if(Math.abs(ox)===rad && Math.abs(oz)===rad && (dy>=th || h2(x+ox,z+oz)<0.5)) continue;
+            setIfAir(lx+ox, h+dy, lz+oz, A.leaves);
+          }
+        }
+        for(let dy=1; dy<=th; dy++) b[cIdx(lx,h+dy,lz)] = A.log;
+        b[cIdx(lx,h,lz)] = A.dirt;
+        continue;
+      }
+    }
+    if(top===A.grass){
+      if(r1 > 0.93) setIfAir(lx,h+1,lz, A.tallgrass);
+      else if(r1 < 0.012) setIfAir(lx,h+1,lz, r2<0.5?A.dandelion:A.poppy);
+    }
+    if(top===A.sand && biome==='desert' && r1 < 0.0045){
+      const chh = 2+floor(r2*2);
+      for(let dy=1; dy<=chh; dy++) setIfAir(lx,h+dy,lz, A.cactus);
+    }
+  }
+  // ---- player edits recorded for this chunk
+  const em = W.edits.get(cKey(cx,cz));
+  if(em) for(const [i,id] of em) b[i] = id;
+  ch.gen = true;
+  seedChunkLight(ch);
+  ch.dirty = true;
+  markDirty(cx-1,cz); markDirty(cx+1,cz); markDirty(cx,cz-1); markDirty(cx,cz+1);
+}
+
+function ensureChunk(cx,cz){
+  let ch = chunkAt(cx,cz);
+  if(!ch){ ch = newChunk(cx,cz); W.chunks.set(cKey(cx,cz), ch); }
+  if(!ch.gen) genChunk(ch);
+  return ch;
+}
+// ============================================================ mesher
+const PW = 18, PH = H+2, PYS = PW*PW, PZS = PW;
+const pb  = new Uint8Array(PW*PW*PH);   // padded blocks
+const psk = new Uint8Array(PW*PW*PH);   // padded sky light
+const pbl = new Uint8Array(PW*PW*PH);   // padded block light
+const pI = (px,py,pz) => py*PYS + pz*PZS + px;
+
+// faces: d=normal, c=4 corners (CCW from outside), uv per corner
+const FACES = [
+  { d:[0,1,0],  c:[[0,1,1],[1,1,1],[1,1,0],[0,1,0]], uv:[[0,1],[1,1],[1,0],[0,0]], shade:1.0,  ti:0 },
+  { d:[0,-1,0], c:[[0,0,0],[1,0,0],[1,0,1],[0,0,1]], uv:[[0,0],[1,0],[1,1],[0,1]], shade:0.55, ti:1 },
+  { d:[1,0,0],  c:[[1,0,1],[1,0,0],[1,1,0],[1,1,1]], uv:[[0,1],[1,1],[1,0],[0,0]], shade:0.66, ti:2 },
+  { d:[-1,0,0], c:[[0,0,0],[0,0,1],[0,1,1],[0,1,0]], uv:[[0,1],[1,1],[1,0],[0,0]], shade:0.66, ti:2 },
+  { d:[0,0,1],  c:[[0,0,1],[1,0,1],[1,1,1],[0,1,1]], uv:[[0,1],[1,1],[1,0],[0,0]], shade:0.84, ti:2 },
+  { d:[0,0,-1], c:[[1,0,0],[0,0,0],[0,1,0],[1,1,0]], uv:[[0,1],[1,1],[1,0],[0,0]], shade:0.84, ti:2 },
+];
+// per face: tangent axes and per-corner side signs, precomputed
+for(const f of FACES){
+  const n = f.d;
+  const ax = n[0]!==0 ? [[0,1,0],[0,0,1]] : n[1]!==0 ? [[1,0,0],[0,0,1]] : [[1,0,0],[0,1,0]];
+  f.t1 = ax[0]; f.t2 = ax[1];
+  f.sgn = f.c.map(v => {
+    const s1 = (f.t1[0]?v[0]:f.t1[1]?v[1]:v[2]) ? 1 : -1;
+    const s2 = (f.t2[0]?v[0]:f.t2[1]?v[1]:v[2]) ? 1 : -1;
+    return [s1,s2];
+  });
+}
+const AOF = [0.42, 0.62, 0.8, 1.0];
+const aoSolid = id => BLOCKS[id].ao && OPAC[id]>0;
+
+// growable float builders
+function mkBuilder(){ return { a: new Float32Array(1<<14), n:0,
+  need(k){ if(this.n+k > this.a.length){ const b = new Float32Array(this.a.length*2); b.set(this.a); this.a=b; this.need(k); } } }; }
+const bldS = mkBuilder(), bldW = mkBuilder();
+
+function pushV(b, x,y,z, u,v, s,l){ b.need(7); const a=b.a; let n=b.n; a[n++]=x;a[n++]=y;a[n++]=z;a[n++]=u;a[n++]=v;a[n++]=s;a[n++]=l; b.n=n; }
+function pushQuad(b, P, U, S, L, flip){   // P[4][3] pos, U[4][2] uv, S[4] sky, L[4] blk
+  const order = flip ? [1,2,3, 1,3,0] : [0,1,2, 0,2,3];
+  for(const i of order) pushV(b, P[i][0],P[i][1],P[i][2], U[i][0],U[i][1], S[i], L[i]);
+}
+
+function fillPadded(ch){
+  const cx=ch.cx, cz=ch.cz;
+  const nbr = [];
+  for(let dz=-1;dz<=1;dz++) for(let dx=-1;dx<=1;dx++){
+    const c = chunkAt(cx+dx, cz+dz);
+    nbr.push(c && c.gen ? c : null);
+  }
+  for(let pz=0; pz<PW; pz++){
+    const wz = cz*16 + pz - 1, ncz = wz>>4, lz = wz&15;
+    for(let px=0; px<PW; px++){
+      const wx = cx*16 + px - 1, ncx = wx>>4, lx = wx&15;
+      const src = nbr[(ncz-cz+1)*3 + (ncx-cx+1)];
+      const base = pz*PZS + px;
+      if(!src){
+        for(let py=0; py<PH; py++){ const o=py*PYS+base; pb[o]=A.stone; psk[o]=0; pbl[o]=0; }
+        continue;
+      }
+      pb[base]=A.bedrock; psk[base]=0; pbl[base]=0;              // y = -1
+      const top = (PH-1)*PYS+base;
+      pb[top]=A.air; psk[top]=15; pbl[top]=0;                    // y = H
+      let si = cIdx(lx,0,lz);
+      for(let py=1; py<PH-1; py++){
+        const o = py*PYS+base;
+        pb[o]=src.b[si]; psk[o]=src.sk[si]; pbl[o]=src.bl[si];
+        si += 256;
+      }
+    }
+  }
+}
+
+const _P=[[0,0,0],[0,0,0],[0,0,0],[0,0,0]], _U=[[0,0],[0,0],[0,0],[0,0]], _S=[0,0,0,0], _L=[0,0,0,0];
+function cubeFace(b, f, x,y,z, px,py,pz, tile, hTop){
+  const [u0,v0] = tileUV(tile);
+  const n=f.d;
+  const lx=px+n[0], ly=py+n[1], lz=pz+n[2];
+  const li = pI(lx,ly,lz);
+  for(let i=0;i<4;i++){
+    const c = f.c[i];
+    const vy = (c[1]===1 && hTop!==undefined) ? hTop : c[1];
+    _P[i][0]=x+c[0]; _P[i][1]=y+vy; _P[i][2]=z+c[2];
+    _U[i][0]=u0 + (f.uv[i][0] ? UVT-UVE : UVE);
+    _U[i][1]=v0 + (f.uv[i][1] ? UVT-UVE : UVE);
+    // smooth light + AO sampled around lit cell
+    const s1o = f.sgn[i][0], s2o = f.sgn[i][1];
+    const i1 = pI(lx+f.t1[0]*s1o, ly+f.t1[1]*s1o, lz+f.t1[2]*s1o);
+    const i2 = pI(lx+f.t2[0]*s2o, ly+f.t2[1]*s2o, lz+f.t2[2]*s2o);
+    const ic = pI(lx+f.t1[0]*s1o+f.t2[0]*s2o, ly+f.t1[1]*s1o+f.t2[1]*s2o, lz+f.t1[2]*s1o+f.t2[2]*s2o);
+    const o1 = aoSolid(pb[i1])?1:0, o2 = aoSolid(pb[i2])?1:0, oc = aoSolid(pb[ic])?1:0;
+    const ao = (o1&&o2) ? 0 : 3-(o1+o2+oc);
+    let sSum = psk[li], lSum = pbl[li], cnt = 1;
+    if(!o1){ sSum+=psk[i1]; lSum+=pbl[i1]; cnt++; }
+    if(!o2){ sSum+=psk[i2]; lSum+=pbl[i2]; cnt++; }
+    if(!(o1&&o2) && !oc){ sSum+=psk[ic]; lSum+=pbl[ic]; cnt++; }
+    const m = AOF[ao]*f.shade/(15*cnt);
+    _S[i]=sSum*m; _L[i]=lSum*m;
+  }
+  const flip = (_S[0]+_L[0]+_S[2]+_L[2]) < (_S[1]+_L[1]+_S[3]+_L[3]);
+  pushQuad(b, _P,_U,_S,_L, flip);
+}
+
+function crossQuads(bld, x,y,z, tile, sv, lv){
+  const [u0,v0] = tileUV(tile);
+  const m = 0.146, q = 1-m;
+  const u=[u0+UVE, u0+UVT-UVE], v=[v0+UVE, v0+UVT-UVE];
+  const quads = [
+    [[x+m,y,z+m],[x+q,y,z+q],[x+q,y+1,z+q],[x+m,y+1,z+m]],
+    [[x+q,y,z+m],[x+m,y,z+q],[x+m,y+1,z+q],[x+q,y+1,z+m]],
+  ];
+  for(const Q of quads){
+    const U=[[u[0],v[1]],[u[1],v[1]],[u[1],v[0]],[u[0],v[0]]];
+    const S=[sv,sv,sv,sv], L=[lv,lv,lv,lv];
+    pushQuad(bld, Q, U, S, L, false);
+    pushQuad(bld, [Q[3],Q[2],Q[1],Q[0]], [U[3],U[2],U[1],U[0]], S, L, false);
+  }
+}
+
+function torchGeom(bld, x,y,z, sv, lv){
+  const [u0,v0] = tileUV(BLOCKS[A.torch].t[0]);
+  const px = 1/256;
+  const a=0.4375, bq=0.5625, hT=0.75;
+  const uS=[u0+7*px, u0+9*px], vS=[v0+4*px, v0+16*px];
+  const S=[sv,sv,sv,sv], L=[lv,lv,lv,lv];
+  const sides = [
+    [[x+a,y,z+bq],[x+a,y,z+a],[x+a,y+hT,z+a],[x+a,y+hT,z+bq]],
+    [[x+bq,y,z+a],[x+bq,y,z+bq],[x+bq,y+hT,z+bq],[x+bq,y+hT,z+a]],
+    [[x+a,y,z+a],[x+bq,y,z+a],[x+bq,y+hT,z+a],[x+a,y+hT,z+a]],
+    [[x+bq,y,z+bq],[x+a,y,z+bq],[x+a,y+hT,z+bq],[x+bq,y+hT,z+bq]],
+  ];
+  for(const Q of sides){
+    const U=[[uS[0],vS[1]],[uS[1],vS[1]],[uS[1],vS[0]],[uS[0],vS[0]]];
+    pushQuad(bld, Q, U, S, L, false);
+    pushQuad(bld, [Q[3],Q[2],Q[1],Q[0]], [U[3],U[2],U[1],U[0]], S, L, false);
+  }
+  const vT=[v0+4*px, v0+6*px];
+  pushQuad(bld, [[x+a,y+hT,z+bq],[x+bq,y+hT,z+bq],[x+bq,y+hT,z+a],[x+a,y+hT,z+a]],
+    [[uS[0],vT[1]],[uS[1],vT[1]],[uS[1],vT[0]],[uS[0],vT[0]]], S, L, false);
+}
+
+function buildMesh(ch){
+  fillPadded(ch);
+  bldS.n = 0; bldW.n = 0;
+  for(let y=0;y<H;y++){
+    const py = y+1;
+    for(let z=0;z<16;z++){
+      const pz = z+1;
+      for(let x=0;x<16;x++){
+        const px = x+1;
+        const i = pI(px,py,pz);
+        const id = pb[i];
+        if(id===A.air) continue;
+        const bk = BLOCKS[id];
+        if(bk.kind===3){      // cross plant
+          const m = AOF[3]/15;
+          crossQuads(bldS, x,y,z, bk.t[0], psk[i]*m, pbl[i]*m);
+          continue;
+        }
+        if(bk.kind===4){      // torch
+          const m = 1/15;
+          torchGeom(bldS, x,y,z, psk[i]*m, Math.max(pbl[i],14)*m);
+          continue;
+        }
+        if(bk.kind===2){      // water
+          const above = pb[i+PYS];
+          const hTop = (above===A.water || isOpaque(above)) ? 1 : 0.875;
+          for(let fi=0; fi<6; fi++){
+            const f = FACES[fi];
+            const ni = pI(px+f.d[0], py+f.d[1], pz+f.d[2]);
+            const nid = pb[ni];
+            if(nid===A.water || isOpaque(nid)) continue;
+            cubeFaceWater(bldW, f, x,y,z, px,py,pz, bk.t[f.ti], hTop);
+          }
+          continue;
+        }
+        // cube (opaque or cutout)
+        for(let fi=0; fi<6; fi++){
+          const f = FACES[fi];
+          const ni = pI(px+f.d[0], py+f.d[1], pz+f.d[2]);
+          const nid = pb[ni];
+          if(isOpaque(nid)) continue;
+          if(bk.same && nid===id) continue;
+          cubeFace(bldS, f, x,y,z, px,py,pz, bk.t[f.ti]);
+        }
+      }
+    }
+  }
+  uploadMesh(ch);
+}
+function cubeFaceWater(bld, f, x,y,z, px,py,pz, tile, hTop){
+  const [u0,v0] = tileUV(tile);
+  const n=f.d;
+  const li = pI(px+n[0], py+n[1], pz+n[2]);
+  const sv = psk[li]/15*f.shade, lv = pbl[li]/15*f.shade;
+  for(let i=0;i<4;i++){
+    const c = f.c[i];
+    const vy = c[1]===1 ? hTop : 0;
+    _P[i][0]=x+c[0]; _P[i][1]=y+vy; _P[i][2]=z+c[2];
+    _U[i][0]=u0 + (f.uv[i][0] ? UVT-UVE : UVE);
+    _U[i][1]=v0 + (f.uv[i][1] ? UVT-UVE : UVE);
+    _S[i]=sv; _L[i]=lv;
+  }
+  pushQuad(bld, _P,_U,_S,_L, false);
+}
+// ============================================================ webgl renderer
+let gl = null, texAtlas = null, texCloud = null;
+let drawCalls = 0, triCount = 0;
+
+const VS_CHUNK = `
+attribute vec3 aPos; attribute vec2 aUV; attribute vec2 aLit;
+uniform mat4 uPV; uniform vec3 uOrg; uniform vec3 uEye; uniform vec2 uUVS; uniform vec2 uUVO;
+varying vec2 vUV; varying vec2 vLit; varying float vDist;
+void main(){
+  vec3 w = aPos + uOrg;
+  gl_Position = uPV * vec4(w, 1.0);
+  vUV = aUV * uUVS + uUVO;
+  vLit = aLit;
+  vDist = distance(w.xz, uEye.xz);   // cylindrical fog: high-altitude views stay clear
+}`;
+const FS_CHUNK = `
+precision mediump float;
+uniform sampler2D uTex; uniform float uDay; uniform vec3 uFogCol; uniform vec2 uFog;
+uniform float uCutoff; uniform float uAlphaMul;
+varying vec2 vUV; varying vec2 vLit; varying float vDist;
+void main(){
+  vec4 t = texture2D(uTex, vUV);
+  if(t.a < uCutoff) discard;
+  vec3 lin = max(vec3(vLit.x * uDay), vLit.y * vec3(1.0, 0.78, 0.45));
+  lin = max(lin, vec3(0.045));
+  vec3 col = t.rgb * lin;
+  float f = clamp((vDist - uFog.x) / (uFog.y - uFog.x), 0.0, 1.0);
+  gl_FragColor = vec4(mix(col, uFogCol, f*f), t.a * uAlphaMul);
+}`;
+const VS_LINE = `
+attribute vec3 aPos; uniform mat4 uPV; uniform vec3 uOrg;
+void main(){ gl_Position = uPV * vec4(aPos + uOrg, 1.0); }`;
+const FS_LINE = `
+precision mediump float; uniform vec4 uCol;
+void main(){ gl_FragColor = uCol; }`;
+const VS_STAR = `
+attribute vec3 aPos; attribute float aMag; uniform mat4 uPV;
+void main(){ gl_Position = uPV * vec4(aPos, 1.0); gl_PointSize = aMag; }`;
+const FS_STAR = `
+precision mediump float; uniform float uA;
+void main(){ gl_FragColor = vec4(0.95, 0.97, 1.0, uA); }`;
+const VS_PART = `
+attribute vec3 aPos; attribute vec2 aUV0; attribute vec2 aLit; attribute float aSize;
+uniform mat4 uPV; uniform float uScale;
+varying vec2 vUV0; varying vec2 vLit;
+void main(){
+  gl_Position = uPV * vec4(aPos, 1.0);
+  gl_PointSize = clamp(aSize * uScale / max(gl_Position.w, 0.01), 1.0, 64.0);
+  vUV0 = aUV0; vLit = aLit;
+}`;
+const FS_PART = `
+precision mediump float;
+uniform sampler2D uTex; uniform float uDay;
+varying vec2 vUV0; varying vec2 vLit;
+void main(){
+  vec4 t = texture2D(uTex, vUV0 + gl_PointCoord * ${(3/256).toFixed(6)});
+  if(t.a < 0.5) discard;
+  vec3 lin = max(vec3(vLit.x * uDay), vLit.y * vec3(1.0, 0.78, 0.45));
+  lin = max(lin, vec3(0.045));
+  gl_FragColor = vec4(t.rgb * lin, 1.0);
+}`;
+const VS_CLOUD = `
+attribute vec2 aXZ; uniform mat4 uPV; uniform vec3 uEye; uniform float uY;
+varying vec2 vW; varying vec2 vRel;
+void main(){
+  vec3 w = vec3(aXZ.x + uEye.x, uY, aXZ.y + uEye.z);
+  gl_Position = uPV * vec4(w, 1.0);
+  vW = w.xz;
+  vRel = aXZ * 0.001;     // linear varying, scaled to stay in mediump range
+}`;
+const FS_CLOUD = `
+precision mediump float;
+uniform sampler2D uTex; uniform float uOff; uniform float uBright;
+varying vec2 vW; varying vec2 vRel;
+void main(){
+  vec4 t = texture2D(uTex, (vW + vec2(uOff, 0.0)) / 768.0);
+  if(t.a < 0.5) discard;
+  float fade = 1.0 - clamp((length(vRel) - 0.35) / 0.32, 0.0, 1.0);
+  gl_FragColor = vec4(vec3(uBright), 0.55 * fade);
+}`;
+
+function compile(vsSrc, fsSrc, name){
+  const mk = (type, src) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(name+' shader: '+gl.getShaderInfoLog(s));
+    return s;
+  };
+  const p = gl.createProgram();
+  gl.attachShader(p, mk(gl.VERTEX_SHADER, vsSrc));
+  gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fsSrc));
+  gl.linkProgram(p);
+  if(!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(name+' link: '+gl.getProgramInfoLog(p));
+  const r = { p, a:{}, u:{} };
+  const nA = gl.getProgramParameter(p, gl.ACTIVE_ATTRIBUTES);
+  for(let i=0;i<nA;i++){ const inf = gl.getActiveAttrib(p,i); r.a[inf.name] = gl.getAttribLocation(p, inf.name); }
+  const nU = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for(let i=0;i<nU;i++){ const inf = gl.getActiveUniform(p,i); r.u[inf.name.replace('[0]','')] = gl.getUniformLocation(p, inf.name); }
+  return r;
+}
+let PRG_C, PRG_L, PRG_S, PRG_P, PRG_K;     // chunk, line, star, particle, cloud
+let bufCrack, bufSel, bufStars, bufSky, bufPart, bufCloud;
+const STAR_N = 450;
+
+function makeTex(src, repeat){
+  const t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, repeat?gl.REPEAT:gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, repeat?gl.REPEAT:gl.CLAMP_TO_EDGE);
+  return t;
+}
+
+function buildCrackBuffer(){
+  // unit cube, uv 0..1 per face, lit=(1,1); slightly inflated
+  const arr = [];
+  const e = 0.0015;
+  for(const f of FACES){
+    const P = f.c.map(c => [c[0]*(1+2*e)-e, c[1]*(1+2*e)-e, c[2]*(1+2*e)-e]);
+    const U = f.uv;
+    for(const i of [0,1,2, 0,2,3]) arr.push(P[i][0],P[i][1],P[i][2], U[i][0],U[i][1], 1,1);
+  }
+  bufCrack = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, bufCrack);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
+}
+function buildSelBuffer(){
+  const e = 0.004, a = -e, b = 1+e;
+  const C = [[a,a,a],[b,a,a],[b,a,b],[a,a,b],[a,b,a],[b,b,a],[b,b,b],[a,b,b]];
+  const E = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+  const arr = [];
+  for(const [i,j] of E) arr.push(...C[i], ...C[j]);
+  bufSel = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, bufSel);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
+}
+function buildStarBuffer(){
+  const r = mulberry32(strHash('stars'));
+  const arr = [];
+  for(let i=0;i<STAR_N;i++){
+    let x,y,z,l;
+    do { x=r()*2-1; y=r()*2-1; z=r()*2-1; l=x*x+y*y+z*z; } while(l>1 || l<0.01);
+    l = Math.sqrt(l);
+    arr.push(x/l, y/l, z/l, r()<0.85 ? 1+r() : 2+r());
+  }
+  bufStars = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, bufStars);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
+}
+function buildCloudBuffer(){
+  const s = 760;
+  bufCloud = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, bufCloud);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-s,-s, s,-s, s,s, -s,-s, s,s, -s,s]), gl.STATIC_DRAW);
+}
+
+function glInit(){
+  gl = canvas.getContext('webgl', {antialias:false, alpha:false, powerPreference:'high-performance'});
+  if(!gl) throw new Error('WebGL is not available in this browser.');
+  PRG_C = compile(VS_CHUNK, FS_CHUNK, 'chunk');
+  PRG_L = compile(VS_LINE, FS_LINE, 'line');
+  PRG_S = compile(VS_STAR, FS_STAR, 'star');
+  PRG_P = compile(VS_PART, FS_PART, 'part');
+  PRG_K = compile(VS_CLOUD, FS_CLOUD, 'cloud');
+  texAtlas = makeTex(ATLAS, false);
+  texCloud = makeTex(CLOUDC, true);
+  buildCrackBuffer(); buildSelBuffer(); buildStarBuffer(); buildCloudBuffer();
+  bufSky = gl.createBuffer(); bufPart = gl.createBuffer();
+  gl.enable(gl.DEPTH_TEST);
+  gl.enable(gl.CULL_FACE);
+  gl.cullFace(gl.BACK);
+  gl.clearDepth(1);
+}
+function uploadMesh(ch){
+  if(bldS.n > 0){
+    if(!ch.vboS) ch.vboS = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, ch.vboS);
+    gl.bufferData(gl.ARRAY_BUFFER, bldS.a.subarray(0, bldS.n), gl.STATIC_DRAW);
+  }
+  ch.nS = bldS.n/7;
+  if(bldW.n > 0){
+    if(!ch.vboW) ch.vboW = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, ch.vboW);
+    gl.bufferData(gl.ARRAY_BUFFER, bldW.a.subarray(0, bldW.n), gl.STATIC_DRAW);
+  }
+  ch.nW = bldW.n/7;
+  ch.dirty = false; ch.meshed = true;
+}
+function freeChunkGL(ch){
+  if(ch.vboS) gl.deleteBuffer(ch.vboS);
+  if(ch.vboW) gl.deleteBuffer(ch.vboW);
+  ch.vboS = ch.vboW = null; ch.nS = ch.nW = 0; ch.meshed = false;
+}
+function bindChunkAttribs(prg){
+  gl.vertexAttribPointer(prg.a.aPos, 3, gl.FLOAT, false, 28, 0);
+  gl.vertexAttribPointer(prg.a.aUV,  2, gl.FLOAT, false, 28, 12);
+  gl.vertexAttribPointer(prg.a.aLit, 2, gl.FLOAT, false, 28, 20);
+  gl.enableVertexAttribArray(prg.a.aPos);
+  gl.enableVertexAttribArray(prg.a.aUV);
+  gl.enableVertexAttribArray(prg.a.aLit);
+}
+
+// ---- particles
+const PARTS = [];
+function spawnParticles(x,y,z,id,count){
+  const b = BLOCKS[id]; if(!b || b.kind===-1) return;
+  const [u0,v0] = tileUV(b.t[2]);
+  const r = Math.random;
+  const sv = getSky(x,y,z)/15, lv = getBlkL(x,y,z)/15;
+  for(let i=0;i<count;i++){
+    if(PARTS.length >= 500) PARTS.shift();
+    PARTS.push({
+      x: x+0.2+r()*0.6, y: y+0.2+r()*0.6, z: z+0.2+r()*0.6,
+      vx:(r()-0.5)*4, vy:1.5+r()*4, vz:(r()-0.5)*4,
+      u: u0 + (1+r()*11)/256, v: v0 + (1+r()*11)/256,
+      s: 0.09+r()*0.1, life: 0.5+r()*0.5, sv, lv,
+    });
+  }
+}
+function updateParticles(dt){
+  for(let i=PARTS.length-1;i>=0;i--){
+    const p = PARTS[i];
+    p.life -= dt;
+    if(p.life<=0){ PARTS.splice(i,1); continue; }
+    p.vy -= 22*dt;
+    const nx = p.x+p.vx*dt, ny = p.y+p.vy*dt, nz = p.z+p.vz*dt;
+    if(SOLID[getB(floor(nx),floor(p.y),floor(p.z))]) p.vx*=-0.4; else p.x=nx;
+    if(SOLID[getB(floor(p.x),floor(ny),floor(p.z))]){ p.vy*=-0.3; p.vx*=0.7; p.vz*=0.7; } else p.y=ny;
+    if(SOLID[getB(floor(p.x),floor(p.y),floor(nz))]) p.vz*=-0.4; else p.z=nz;
+  }
+}
+
+// ---- sky color state (computed per frame, also used by HUD)
+const SKY = { day:0, sun:0, zen:[0,0,0], hor:[0,0,0], phi:0 };
+function computeSky(){
+  const t = (W.time/DAYLEN) % 1;
+  const phi = t*Math.PI*2;
+  const sunUp = Math.sin(phi);
+  const dl = clamp01((sunUp+0.08)/0.30);
+  SKY.phi = phi; SKY.sun = sunUp;
+  SKY.day = 0.12 + 0.88*dl;
+  const mixc = (a,b,t2,o) => { o[0]=lerp(a[0],b[0],t2); o[1]=lerp(a[1],b[1],t2); o[2]=lerp(a[2],b[2],t2); };
+  mixc([0.012,0.018,0.055], [0.45,0.66,1.0], dl, SKY.zen);
+  mixc([0.02,0.03,0.08],   [0.70,0.82,0.96], dl, SKY.hor);
+  const sf = clamp01(1-Math.abs(sunUp)*4) * 0.75;
+  SKY.hor[0]=lerp(SKY.hor[0],1.0,sf); SKY.hor[1]=lerp(SKY.hor[1],0.45,sf); SKY.hor[2]=lerp(SKY.hor[2],0.26,sf);
+}
+
+const mProj = new Float32Array(16), mView = new Float32Array(16), mPV = new Float32Array(16);
+const mA = new Float32Array(16), mB = new Float32Array(16), mPVr = new Float32Array(16);
+let fovCur = 70;
+
+function render(eyeX, eyeY, eyeZ){
+  drawCalls = 0; triCount = 0;
+  const w = canvas.width, h = canvas.height;
+  gl.viewport(0,0,w,h);
+  computeSky();
+  const inWaterEye = getB(floor(eyeX), floor(eyeY), floor(eyeZ)) === A.water;
+  const fogFar = inWaterEye ? 18 : OPT.rd*16-4;
+  const fogNear = inWaterEye ? -4 : fogFar*0.62;
+  const fogCol = inWaterEye ? [0.05*SKY.day+0.01, 0.13*SKY.day+0.02, 0.34*SKY.day+0.04] : SKY.hor;
+  const clearCol = inWaterEye ? fogCol : SKY.zen;
+
+  m4persp(mProj, fovCur*Math.PI/180, w/h, 0.08, 1100);
+  m4rotX(mA, -P.pitch);
+  m4rotY(mB, P.yaw);
+  m4mul(mView, mA, mB);
+  m4mul(mPVr, mProj, mView);           // rotation-only (sky)
+  m4trans(mA, -eyeX, -eyeY, -eyeZ);
+  m4mul(mView, mView, mA);
+  m4mul(mPV, mProj, mView);
+  frustumFrom(mPV);
+
+  gl.clearColor(clearCol[0], clearCol[1], clearCol[2], 1);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  // ---------- sky: stars + sun + moon (no depth)
+  gl.disable(gl.DEPTH_TEST);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  if(!inWaterEye){
+    const starA = clamp01(1 - SKY.day) - 0.1;
+    if(starA > 0.02){
+      gl.useProgram(PRG_S.p);
+      m4rotZ(mA, SKY.phi);
+      m4mul(mB, mPVr, mA);
+      gl.uniformMatrix4fv(PRG_S.u.uPV, false, mB);
+      gl.uniform1f(PRG_S.u.uA, starA);
+      gl.bindBuffer(gl.ARRAY_BUFFER, bufStars);
+      gl.vertexAttribPointer(PRG_S.a.aPos, 3, gl.FLOAT, false, 16, 0);
+      gl.vertexAttribPointer(PRG_S.a.aMag, 1, gl.FLOAT, false, 16, 12);
+      gl.enableVertexAttribArray(PRG_S.a.aPos); gl.enableVertexAttribArray(PRG_S.a.aMag);
+      gl.drawArrays(gl.POINTS, 0, STAR_N); drawCalls++;
+    }
+    drawSkyObjects();
+  }
+  gl.enable(gl.DEPTH_TEST);
+
+  // ---------- solid chunks
+  const vis = [];
+  const pcx = floor(eyeX)>>4, pcz = floor(eyeZ)>>4;
+  for(const ch of W.chunks.values()){
+    if(!ch.meshed) continue;
+    const dx = ch.cx-pcx, dz = ch.cz-pcz;
+    if(dx*dx+dz*dz > OPT.rd*OPT.rd+2) continue;
+    if(!boxVisible(ch.cx*16, 0, ch.cz*16, ch.cx*16+16, H, ch.cz*16+16)) continue;
+    ch._d = (ch.cx*16+8-eyeX)**2 + (ch.cz*16+8-eyeZ)**2;
+    vis.push(ch);
+  }
+  vis.sort((a,b)=>a._d-b._d);
+
+  gl.disable(gl.BLEND);
+  gl.useProgram(PRG_C.p);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, texAtlas);
+  gl.uniform1i(PRG_C.u.uTex, 0);
+  gl.uniformMatrix4fv(PRG_C.u.uPV, false, mPV);
+  gl.uniform3f(PRG_C.u.uEye, eyeX, eyeY, eyeZ);
+  gl.uniform1f(PRG_C.u.uDay, SKY.day);
+  gl.uniform3f(PRG_C.u.uFogCol, fogCol[0], fogCol[1], fogCol[2]);
+  gl.uniform2f(PRG_C.u.uFog, fogNear, fogFar);
+  gl.uniform1f(PRG_C.u.uCutoff, 0.5);
+  gl.uniform1f(PRG_C.u.uAlphaMul, 1);
+  gl.uniform2f(PRG_C.u.uUVS, 1, 1);
+  gl.uniform2f(PRG_C.u.uUVO, 0, 0);
+  for(const ch of vis){
+    if(ch.nS===0) continue;
+    gl.bindBuffer(gl.ARRAY_BUFFER, ch.vboS);
+    bindChunkAttribs(PRG_C);
+    gl.uniform3f(PRG_C.u.uOrg, ch.cx*16, 0, ch.cz*16);
+    gl.drawArrays(gl.TRIANGLES, 0, ch.nS);
+    drawCalls++; triCount += ch.nS/3;
+  }
+
+  // ---------- crack overlay + selection box
+  if(MINE.target && MINE.progress > 0.02){
+    const stage = clamp(floor(MINE.progress*5), 0, 4);
+    const [u0,v0] = tileUV(TILE_CRACK0+stage);
+    gl.enable(gl.BLEND);
+    gl.enable(gl.POLYGON_OFFSET_FILL);
+    gl.polygonOffset(-2,-2);
+    gl.depthMask(false);
+    gl.bindBuffer(gl.ARRAY_BUFFER, bufCrack);
+    bindChunkAttribs(PRG_C);
+    gl.uniform2f(PRG_C.u.uUVS, UVT, UVT);
+    gl.uniform2f(PRG_C.u.uUVO, u0, v0);
+    gl.uniform3f(PRG_C.u.uOrg, MINE.target[0], MINE.target[1], MINE.target[2]);
+    gl.drawArrays(gl.TRIANGLES, 0, 36); drawCalls++;
+    gl.uniform2f(PRG_C.u.uUVS, 1,1); gl.uniform2f(PRG_C.u.uUVO, 0,0);
+    gl.depthMask(true);
+    gl.disable(gl.POLYGON_OFFSET_FILL);
+    gl.disable(gl.BLEND);
+  }
+  if(RAY.hit){
+    gl.useProgram(PRG_L.p);
+    gl.uniformMatrix4fv(PRG_L.u.uPV, false, mPV);
+    gl.uniform3f(PRG_L.u.uOrg, RAY.bx, RAY.by, RAY.bz);
+    gl.uniform4f(PRG_L.u.uCol, 0,0,0,0.75);
+    gl.bindBuffer(gl.ARRAY_BUFFER, bufSel);
+    gl.vertexAttribPointer(PRG_L.a.aPos, 3, gl.FLOAT, false, 12, 0);
+    gl.enableVertexAttribArray(PRG_L.a.aPos);
+    gl.enable(gl.BLEND);
+    gl.drawArrays(gl.LINES, 0, 24); drawCalls++;
+    gl.disable(gl.BLEND);
+  }
+
+  // ---------- clouds
+  if(!inWaterEye){
+    gl.useProgram(PRG_K.p);
+    gl.uniformMatrix4fv(PRG_K.u.uPV, false, mPV);
+    gl.uniform3f(PRG_K.u.uEye, eyeX, eyeY, eyeZ);
+    gl.uniform1f(PRG_K.u.uY, 108);
+    gl.uniform1f(PRG_K.u.uOff, (W.time*1.7) % 768);
+    gl.uniform1f(PRG_K.u.uBright, 0.25 + SKY.day*0.72);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texCloud);
+    gl.uniform1i(PRG_K.u.uTex, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, bufCloud);
+    gl.vertexAttribPointer(PRG_K.a.aXZ, 2, gl.FLOAT, false, 8, 0);
+    gl.enableVertexAttribArray(PRG_K.a.aXZ);
+    gl.enable(gl.BLEND);
+    gl.depthMask(false);
+    gl.disable(gl.CULL_FACE);
+    gl.drawArrays(gl.TRIANGLES, 0, 6); drawCalls++;
+    gl.enable(gl.CULL_FACE);
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+  }
+
+  // ---------- particles
+  if(PARTS.length){
+    const arr = new Float32Array(PARTS.length*8);
+    let o=0;
+    for(const p of PARTS){ arr[o++]=p.x; arr[o++]=p.y; arr[o++]=p.z; arr[o++]=p.u; arr[o++]=p.v; arr[o++]=p.sv; arr[o++]=p.lv; arr[o++]=p.s; }
+    gl.useProgram(PRG_P.p);
+    gl.uniformMatrix4fv(PRG_P.u.uPV, false, mPV);
+    gl.uniform1f(PRG_P.u.uScale, h/2 * mProj[5]);
+    gl.uniform1f(PRG_P.u.uDay, SKY.day);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texAtlas);
+    gl.uniform1i(PRG_P.u.uTex, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, bufPart);
+    gl.bufferData(gl.ARRAY_BUFFER, arr, gl.DYNAMIC_DRAW);
+    gl.vertexAttribPointer(PRG_P.a.aPos, 3, gl.FLOAT, false, 32, 0);
+    gl.vertexAttribPointer(PRG_P.a.aUV0, 2, gl.FLOAT, false, 32, 12);
+    gl.vertexAttribPointer(PRG_P.a.aLit, 2, gl.FLOAT, false, 32, 20);
+    gl.vertexAttribPointer(PRG_P.a.aSize,1, gl.FLOAT, false, 32, 28);
+    gl.enableVertexAttribArray(PRG_P.a.aPos); gl.enableVertexAttribArray(PRG_P.a.aUV0);
+    gl.enableVertexAttribArray(PRG_P.a.aLit); gl.enableVertexAttribArray(PRG_P.a.aSize);
+    gl.depthMask(false);
+    gl.drawArrays(gl.POINTS, 0, PARTS.length); drawCalls++;
+    gl.depthMask(true);
+  }
+
+  // ---------- water (blended, back to front, both faces)
+  gl.useProgram(PRG_C.p);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, texAtlas);
+  gl.enable(gl.BLEND);
+  gl.disable(gl.CULL_FACE);
+  gl.uniform1f(PRG_C.u.uCutoff, 0);
+  for(let i=vis.length-1;i>=0;i--){
+    const ch = vis[i];
+    if(ch.nW===0) continue;
+    gl.bindBuffer(gl.ARRAY_BUFFER, ch.vboW);
+    bindChunkAttribs(PRG_C);
+    gl.uniform3f(PRG_C.u.uOrg, ch.cx*16, 0, ch.cz*16);
+    gl.drawArrays(gl.TRIANGLES, 0, ch.nW);
+    drawCalls++; triCount += ch.nW/3;
+  }
+  gl.enable(gl.CULL_FACE);
+  gl.disable(gl.BLEND);
+}
+
+function drawSkyObjects(){
+  // sun + moon billboard quads on the day arc
+  const D = 430, t1=[0,0,1];
+  const quads = [];
+  const addQuad = (dir, size, tile) => {
+    const t2 = [-dir[1], dir[0], 0];                 // tangent in orbit plane
+    const [u0,v0] = tileUV(tile);
+    const cx2 = dir[0]*D, cy2 = dir[1]*D, cz2 = dir[2]*D;
+    const c = [];
+    for(const [s1,s2,uu,vv] of [[-1,-1,0,1],[1,-1,1,1],[1,1,1,0],[-1,1,0,0]]){
+      c.push([cx2 + t1[0]*s1*size + t2[0]*s2*size,
+              cy2 + t1[1]*s1*size + t2[1]*s2*size,
+              cz2 + t1[2]*s1*size + t2[2]*s2*size,
+              u0 + (uu? UVT-UVE : UVE), v0 + (vv? UVT-UVE : UVE)]);
+    }
+    for(const i of [0,1,2, 0,2,3]) quads.push(c[i][0],c[i][1],c[i][2],c[i][3],c[i][4], 1, 1);
+  };
+  const sd = [Math.cos(SKY.phi), Math.sin(SKY.phi), 0];
+  if(sd[1] > -0.15) addQuad(sd, 34, TILE_SUN);
+  const md = [-sd[0], -sd[1], -sd[2]];
+  if(md[1] > -0.15) addQuad(md, 22, TILE_MOON);
+  if(!quads.length) return;
+  gl.useProgram(PRG_C.p);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, texAtlas);
+  gl.uniform1i(PRG_C.u.uTex, 0);
+  gl.uniformMatrix4fv(PRG_C.u.uPV, false, mPVr);
+  gl.uniform3f(PRG_C.u.uOrg, 0,0,0);
+  gl.uniform3f(PRG_C.u.uEye, 0,0,0);
+  gl.uniform1f(PRG_C.u.uDay, 1);
+  gl.uniform2f(PRG_C.u.uFog, 9e8, 9.1e8);
+  gl.uniform3f(PRG_C.u.uFogCol, 0,0,0);
+  gl.uniform1f(PRG_C.u.uCutoff, 0.1);
+  gl.uniform1f(PRG_C.u.uAlphaMul, 1);
+  gl.uniform2f(PRG_C.u.uUVS, 1,1);
+  gl.uniform2f(PRG_C.u.uUVO, 0,0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, bufSky);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(quads), gl.DYNAMIC_DRAW);
+  bindChunkAttribs(PRG_C);
+  gl.drawArrays(gl.TRIANGLES, 0, quads.length/7);
+  drawCalls++;
+}
+
+function resize(){
+  const dpr = Math.min(window.devicePixelRatio||1, 1.5);
+  const wCss = window.innerWidth, hCss = window.innerHeight;
+  if(canvas.width !== floor(wCss*dpr) || canvas.height !== floor(hCss*dpr)){
+    canvas.width = floor(wCss*dpr); canvas.height = floor(hCss*dpr);
+  }
+  if(hudC.width !== floor(wCss*dpr) || hudC.height !== floor(hCss*dpr)){
+    hudC.width = floor(wCss*dpr); hudC.height = floor(hCss*dpr);
+    hctx.setTransform(dpr,0,0,dpr,0,0);
+    hctx.imageSmoothingEnabled = false;
+  }
+}
+// ============================================================ player + input
+const P = { x:8.5, y:80, z:8.5, vx:0, vy:0, vz:0, yaw:0.5, pitch:-0.15,
+            fly:false, onGround:false, inWater:false, eyeH:1.62, sneak:false, sprint:false,
+            spawn:[8.5,80,8.5] };
+const KEY = {};
+const MB = { l:false, r:false };
+const HOT = [A.grass, A.dirt, A.stone, A.cobble, A.planks, A.log, A.glass, A.torch, A.water];
+let SEL = 0;
+let NOLOCK = false, dbg = false;
+let lastW = 0, lastSpace = 0, placeTimer = 0;
+const HAND = { swing:0, bob:0 };
+const RAY = { hit:false, bx:0, by:0, bz:0, nx:0, ny:0, nz:0 };
+const MINE = { target:null, progress:0, sndT:0 };
+
+const eyeY = () => P.y + P.eyeH;
+function lookDir(){
+  const cp = Math.cos(P.pitch);
+  return [Math.sin(P.yaw)*cp, Math.sin(P.pitch), -Math.cos(P.yaw)*cp];
+}
+
+// ---- collision (swept per axis, AABB 0.6 x 1.8)
+const HW = 0.3, PH_E = 1.8, CEPS = 0.001;
+function collide(axis, delta){
+  if(axis===0) P.x += delta; else if(axis===1) P.y += delta; else P.z += delta;
+  const x0 = floor(P.x-HW), x1 = floor(P.x+HW);
+  const y0 = floor(P.y),    y1 = floor(P.y+PH_E);
+  const z0 = floor(P.z-HW), z1 = floor(P.z+HW);
+  let hit = false;
+  for(let y=y0; y<=y1; y++) for(let z=z0; z<=z1; z++) for(let x=x0; x<=x1; x++){
+    if(!SOLID[getB(x,y,z)]) continue;
+    hit = true;
+    if(axis===0) P.x = delta>0 ? x-HW-CEPS : x+1+HW+CEPS;
+    else if(axis===1) P.y = delta>0 ? y-PH_E-CEPS : y+1+CEPS;
+    else P.z = delta>0 ? z-HW-CEPS : z+1+HW+CEPS;
+  }
+  if(hit){
+    if(axis===0) P.vx = 0;
+    else if(axis===1){ if(delta<0) P.onGround = true; P.vy = 0; }
+    else P.vz = 0;
+  }
+  return hit;
+}
+function bodyInWater(){
+  const x0=floor(P.x-HW), x1=floor(P.x+HW), z0=floor(P.z-HW), z1=floor(P.z+HW);
+  const y0=floor(P.y), y1=floor(P.y+1.2);
+  for(let y=y0;y<=y1;y++) for(let z=z0;z<=z1;z++) for(let x=x0;x<=x1;x++)
+    if(getB(x,y,z)===A.water) return true;
+  return false;
+}
+let stepAcc = 0;
+function physics(dt){
+  const fwd = (KEY.KeyW?1:0) - (KEY.KeyS?1:0);
+  const str = (KEY.KeyD?1:0) - (KEY.KeyA?1:0);
+  const sy = Math.sin(P.yaw), cy = Math.cos(P.yaw);
+  let wx = fwd*sy + str*cy, wz = -fwd*cy + str*sy;
+  const wl = Math.hypot(wx,wz);
+  if(wl>0){ wx/=wl; wz/=wl; }
+  if(fwd<=0) P.sprint = false;
+  P.sneak = !!KEY.ShiftLeft && !P.fly;
+  const wasInWater = P.inWater;
+  P.inWater = bodyInWater();
+  if(!wasInWater && P.inWater && P.vy < -4) sfx('splash');
+
+  if(P.fly){
+    const sp = (P.sprint?2:1) * 10.5;
+    P.vx += (wx*sp - P.vx) * Math.min(1, 12*dt);
+    P.vz += (wz*sp - P.vz) * Math.min(1, 12*dt);
+    const vy = (KEY.Space?sp:0) + (KEY.ShiftLeft?-sp:0);
+    P.vy += (vy - P.vy) * Math.min(1, 12*dt);
+  } else if(P.inWater){
+    const sp = 2.4;
+    P.vx += (wx*sp - P.vx) * Math.min(1, 8*dt);
+    P.vz += (wz*sp - P.vz) * Math.min(1, 8*dt);
+    const ty = KEY.Space ? 4.4 : (KEY.ShiftLeft ? -4 : -1.7);
+    P.vy += (ty - P.vy) * Math.min(1, 5*dt);
+  } else {
+    const sp = P.sprint ? 5.8 : (P.sneak ? 1.4 : 4.32);
+    const acc = P.onGround ? 14 : 4;
+    P.vx += (wx*sp - P.vx) * Math.min(1, acc*dt);
+    P.vz += (wz*sp - P.vz) * Math.min(1, acc*dt);
+    P.vy -= 32*dt;
+    if(P.vy < -78) P.vy = -78;
+    if(KEY.Space && P.onGround){ P.vy = 9.2; P.onGround = false; }
+  }
+  P.onGround = false;
+  collide(1, P.vy*dt);
+  collide(0, P.vx*dt);
+  collide(2, P.vz*dt);
+  if(P.onGround && P.fly) P.fly = false;
+
+  // eye height (sneak) smoothing
+  const targetEye = P.sneak ? 1.5 : 1.62;
+  P.eyeH += (targetEye - P.eyeH) * Math.min(1, 18*dt);
+
+  // step sounds + hand bob
+  const hv = Math.hypot(P.vx, P.vz);
+  if(P.onGround && hv > 0.5){
+    stepAcc += hv*dt;
+    HAND.bob += hv*dt*1.6;
+    if(stepAcc > 2.25){ stepAcc = 0; sfx('step', BLOCKS[getB(floor(P.x), floor(P.y-0.5), floor(P.z))].mat); }
+  }
+  if(HAND.swing > 0) HAND.swing = Math.max(0, HAND.swing - dt*5);
+  if(P.y < -12){ const s = P.spawn; P.x=s[0]; P.y=s[1]; P.z=s[2]; P.vx=P.vy=P.vz=0; toast('Fell out of the world — respawned'); }
+
+  // FOV target
+  const fovT = P.sprint || (P.fly && P.sprint) ? 79 : 70;
+  fovCur += (fovT - fovCur) * Math.min(1, 10*dt);
+}
+
+// ---- raycast (DDA)
+const targetable = id => id!==A.air && id!==A.water;
+function raycast(){
+  const d = lookDir();
+  let ox = P.x, oy = eyeY(), oz = P.z;
+  let x = floor(ox), y = floor(oy), z = floor(oz);
+  const stx = d[0]>0?1:-1, sty = d[1]>0?1:-1, stz = d[2]>0?1:-1;
+  const tdx = Math.abs(1/(d[0]||1e-9)), tdy = Math.abs(1/(d[1]||1e-9)), tdz = Math.abs(1/(d[2]||1e-9));
+  let tmx = (stx>0 ? x+1-ox : ox-x) * tdx;
+  let tmy = (sty>0 ? y+1-oy : oy-y) * tdy;
+  let tmz = (stz>0 ? z+1-oz : oz-z) * tdz;
+  let nx=0, ny=0, nz=0, t=0;
+  RAY.hit = false;
+  for(let i=0; i<64 && t<5.2; i++){
+    if(tmx < tmy && tmx < tmz){ x+=stx; t=tmx; tmx+=tdx; nx=-stx; ny=0; nz=0; }
+    else if(tmy < tmz){ y+=sty; t=tmy; tmy+=tdy; nx=0; ny=-sty; nz=0; }
+    else { z+=stz; t=tmz; tmz+=tdz; nx=0; ny=0; nz=-stz; }
+    const id = getB(x,y,z);
+    if(targetable(id)){
+      RAY.hit = true; RAY.bx=x; RAY.by=y; RAY.bz=z; RAY.nx=nx; RAY.ny=ny; RAY.nz=nz;
+      return;
+    }
+  }
+}
+
+// ---- mining / placing
+function mineUpdate(dt){
+  if(!(MB.l && RAY.hit && MODE==='play')){ MINE.target = null; MINE.progress = 0; return; }
+  const t = MINE.target;
+  if(!t || t[0]!==RAY.bx || t[1]!==RAY.by || t[2]!==RAY.bz){
+    MINE.target = [RAY.bx, RAY.by, RAY.bz];
+    MINE.progress = 0; MINE.sndT = 0;
+  }
+  const id = getB(RAY.bx, RAY.by, RAY.bz);
+  const b = BLOCKS[id];
+  if(b.hard < 0){ MINE.progress = 0; return; }     // bedrock
+  MINE.progress += dt / b.hard;
+  MINE.sndT -= dt;
+  if(MINE.sndT <= 0){ MINE.sndT = 0.18; sfx('dig', b.mat); HAND.swing = 1; }
+  if(MINE.progress >= 1){
+    breakBlock(RAY.bx, RAY.by, RAY.bz);
+    MINE.target = null; MINE.progress = 0;
+  }
+}
+function breakBlock(x,y,z){
+  const id = getB(x,y,z);
+  if(id===A.air || BLOCKS[id].hard<0) return false;
+  setB(x,y,z,A.air,true);
+  spawnParticles(x,y,z,id,16);
+  sfx('break', BLOCKS[id].mat);
+  const above = getB(x,y+1,z);
+  if(BLOCKS[above].kind===3 || BLOCKS[above].kind===4){   // pop plants/torches sitting on it
+    setB(x,y+1,z,A.air,true);
+    spawnParticles(x,y+1,z,above,6);
+  }
+  return true;
+}
+const replaceable = id => id===A.air || id===A.water || id===A.tallgrass;
+function tryPlace(){
+  if(!RAY.hit) return false;
+  const id = HOT[SEL];
+  if(!id) return false;
+  let x = RAY.bx, y = RAY.by, z = RAY.bz;
+  if(!replaceable(getB(x,y,z))){ x += RAY.nx; y += RAY.ny; z += RAY.nz; }
+  if(y<1 || y>=H) return false;
+  if(!replaceable(getB(x,y,z))) return false;
+  const b = BLOCKS[id];
+  if(b.solid){           // don't place inside the player
+    const ix = P.x-HW < x+1 && P.x+HW > x, iy = P.y < y+1 && P.y+PH_E > y, iz = P.z-HW < z+1 && P.z+HW > z;
+    if(ix && iy && iz) return false;
+  }
+  if(b.kind===3 || b.kind===4){            // plants/torch need solid ground
+    if(!SOLID[getB(x,y-1,z)]) return false;
+    if(b.kind===3 && ![A.grass,A.dirt,A.snowgrass].includes(getB(x,y-1,z))) return false;
+  }
+  setB(x,y,z,id,true);
+  sfx('place', b.mat);
+  HAND.swing = 1;
+  return true;
+}
+function pickBlock(){
+  if(!RAY.hit) return;
+  const id = getB(RAY.bx, RAY.by, RAY.bz);
+  const i = HOT.indexOf(id);
+  if(i>=0) SEL = i; else HOT[SEL] = id;
+  toast(BLOCKS[id].name);
+}
+
+// ============================================================ audio (procedural)
+let AC = null, masterG = null, noiseBuf = null;
+function audioInit(){
+  if(AC) return;
+  try {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    masterG = AC.createGain();
+    masterG.gain.value = OPT.mute ? 0 : OPT.vol*0.6;
+    masterG.connect(AC.destination);
+    noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+  } catch(e){ AC = null; }
+}
+function applyVol(){ if(masterG) masterG.gain.value = OPT.mute ? 0 : OPT.vol*0.6; }
+function noiseHit(freq, dur, vol, q){
+  if(!AC || AC.state!=='running') return;
+  const src = AC.createBufferSource(); src.buffer = noiseBuf;
+  src.playbackRate.value = 0.7 + Math.random()*0.6;
+  const f = AC.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq*(0.85+Math.random()*0.3); f.Q.value = q||1.6;
+  const g = AC.createGain();
+  g.gain.setValueAtTime(vol, AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
+  src.connect(f); f.connect(g); g.connect(masterG);
+  src.start(AC.currentTime, Math.random()*0.5, dur+0.05);
+  src.stop(AC.currentTime + dur + 0.1);
+}
+const MATF = { grass:[760,1], dirt:[420,1], stone:[900,1.4], sand:[1500,0.8], wood:[280,1.2], leaf:[1900,0.7], glass:[2300,2], snow:[1000,0.7], none:[600,1] };
+function sfx(kind, mat){
+  if(!AC) return;
+  const [f] = MATF[mat] || MATF.none;
+  switch(kind){
+    case 'dig':    noiseHit(f*1.15, 0.07, 0.16, 2); break;
+    case 'break':  noiseHit(f*0.8, 0.16, 0.3, 1.2); noiseHit(f*0.45, 0.2, 0.18, 1); break;
+    case 'place':  noiseHit(f, 0.1, 0.25, 1.6); break;
+    case 'step':   noiseHit(f*1.05, 0.05, 0.05, 1.4); break;
+    case 'splash': noiseHit(800, 0.3, 0.25, 0.7); noiseHit(2400, 0.18, 0.12, 0.8); break;
+    case 'click':  noiseHit(2600, 0.03, 0.12, 4); break;
+  }
+}
+
+// ============================================================ input wiring
+function clearInput(){ for(const k in KEY) KEY[k]=false; MB.l = MB.r = false; }
+const isLocked = () => document.pointerLockElement === canvas;
+function requestLock(){
+  if(NOLOCK) return;
+  const attempt = opts => {
+    try {
+      const p = opts ? canvas.requestPointerLock(opts) : canvas.requestPointerLock();
+      if(p && p.catch) p.catch(()=>{ if(opts) attempt(null); });
+      return true;
+    } catch(e){ return false; }
+  };
+  if(!attempt({ unadjustedMovement: true })) attempt(null);
+}
+function setMode(m){
+  MODE = m;
+  for(const k in UI) UI[k].classList.add('hidden');
+  if(m==='title') UI.title.classList.remove('hidden');
+  else if(m==='loading') UI.loading.classList.remove('hidden');
+  else if(m==='pause') UI.pause.classList.remove('hidden');
+  else if(m==='palette'){ paletteDraw(-1); UI.palette.classList.remove('hidden'); }
+  if(m!=='play') clearInput();
+}
+document.addEventListener('pointerlockchange', () => {
+  if(isLocked()){
+    if(MODE==='pause' || MODE==='palette') setMode('play');
+  } else {
+    if(MODE==='play'){ setMode('pause'); syncPauseUI(); }
+  }
+});
+canvas.addEventListener('click', () => {
+  if(MODE==='play' && !isLocked()) requestLock();
+});
+document.addEventListener('mousemove', e => {
+  if(MODE!=='play' || !isLocked()) return;
+  const mx = clamp(e.movementX,-300,300), my = clamp(e.movementY,-300,300);
+  P.yaw += mx * 0.0023 * OPT.sens;
+  P.pitch -= my * 0.0023 * OPT.sens;
+  const lim = Math.PI/2 - 0.01;
+  P.pitch = clamp(P.pitch, -lim, lim);
+});
+document.addEventListener('mousedown', e => {
+  if(MODE!=='play' || (!isLocked() && !NOLOCK)) return;
+  audioInit(); if(AC && AC.state==='suspended') AC.resume();
+  if(e.button===0) MB.l = true;
+  else if(e.button===2){ MB.r = true; tryPlace(); placeTimer = 0.26; }
+  else if(e.button===1){ e.preventDefault(); pickBlock(); }
+});
+document.addEventListener('mouseup', e => {
+  if(e.button===0) MB.l = false;
+  if(e.button===2) MB.r = false;
+});
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('wheel', e => {
+  if(MODE==='play' || MODE==='palette'){
+    e.preventDefault();
+    SEL = (SEL + (e.deltaY>0?1:-1) + 9) % 9;
+  }
+}, {passive:false});
+
+document.addEventListener('keydown', e => {
+  if(document.activeElement && document.activeElement.tagName==='INPUT' && document.activeElement.type==='text') return;
+  const c = e.code;
+  if(c==='F3'){ e.preventDefault(); dbg=!dbg; return; }
+  if(MODE==='title' || MODE==='loading') return;
+  if(c==='Escape' && NOLOCK){ setMode(MODE==='play' ? 'pause' : 'play'); if(MODE==='pause') syncPauseUI(); return; }
+  if(MODE==='palette'){
+    if(c==='KeyE' || c==='Escape'){ e.preventDefault(); closePalette(); }
+    if(/^Digit[1-9]$/.test(c)) SEL = +c[5]-1;
+    return;
+  }
+  if(MODE!=='play') return;
+  if(!e.repeat) KEY[c] = true;
+  switch(c){
+    case 'Space':
+      e.preventDefault();
+      if(!e.repeat){
+        const now = performance.now();
+        if(now - lastSpace < 280){ P.fly = !P.fly; P.vy = 0; toast(P.fly?'Flying':'Walking'); }
+        lastSpace = now;
+      }
+      break;
+    case 'KeyW':
+      if(!e.repeat){
+        const now = performance.now();
+        if(now - lastW < 280 && !P.sneak) P.sprint = true;
+        lastW = now;
+      }
+      break;
+    case 'KeyF': if(!e.repeat){ P.fly = !P.fly; P.vy = 0; toast(P.fly?'Flying':'Walking'); } break;
+    case 'KeyE': e.preventDefault(); openPalette(); break;
+    case 'KeyG': dbg = !dbg; break;
+    case 'KeyM': OPT.mute = !OPT.mute; applyVol(); saveOpts(); toast(OPT.mute?'Muted':'Sound on'); break;
+    case 'BracketLeft': OPT.rd = clamp(OPT.rd-1,3,9); saveOpts(); toast('Render distance '+OPT.rd); break;
+    case 'BracketRight': OPT.rd = clamp(OPT.rd+1,3,9); saveOpts(); toast('Render distance '+OPT.rd); break;
+    default:
+      if(/^Digit[1-9]$/.test(c)) SEL = +c[5]-1;
+  }
+});
+document.addEventListener('keyup', e => { KEY[e.code] = false; });
+
+// ============================================================ palette
+const palC = $('pal');
+const PAL_COLS = 9, PAL_CELL = 52;
+let palHover = -1;
+function openPalette(){
+  setMode('palette');
+  if(isLocked()) document.exitPointerLock();
+}
+function closePalette(){
+  setMode('play');
+  requestLock();
+}
+function paletteDraw(hover){
+  const rows = Math.ceil(PALETTE_IDS.length/PAL_COLS);
+  palC.width = PAL_COLS*PAL_CELL; palC.height = rows*PAL_CELL;
+  const c = palC.getContext('2d');
+  c.imageSmoothingEnabled = false;
+  c.clearRect(0,0,palC.width,palC.height);
+  PALETTE_IDS.forEach((id,i) => {
+    const x = (i%PAL_COLS)*PAL_CELL, y = floor(i/PAL_COLS)*PAL_CELL;
+    c.fillStyle = i===hover ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.4)';
+    c.fillRect(x+2,y+2,PAL_CELL-4,PAL_CELL-4);
+    c.strokeStyle = i===hover ? '#fff' : '#555';
+    c.lineWidth = 2;
+    c.strokeRect(x+2,y+2,PAL_CELL-4,PAL_CELL-4);
+    drawIcon(c, id, x+8, y+8, PAL_CELL-16);
+  });
+  $('palName').textContent = hover>=0 && hover<PALETTE_IDS.length ? BLOCKS[PALETTE_IDS[hover]].name : '';
+}
+palC.addEventListener('mousemove', e => {
+  const r = palC.getBoundingClientRect();
+  const i = floor((e.clientX-r.left)/PAL_CELL) + floor((e.clientY-r.top)/PAL_CELL)*PAL_COLS;
+  if(i!==palHover){ palHover = i; paletteDraw(i); }
+});
+palC.addEventListener('click', e => {
+  if(palHover>=0 && palHover<PALETTE_IDS.length){
+    HOT[SEL] = PALETTE_IDS[palHover];
+    sfx('click');
+    toast(BLOCKS[HOT[SEL]].name + ' → slot ' + (SEL+1));
+    closePalette();
+  }
+});
+// ============================================================ toasts + hud
+const TOASTS = [];
+function toast(m){ TOASTS.push({m, t:2.4}); if(TOASTS.length>4) TOASTS.shift(); }
+
+function drawHUD(dt){
+  const w = window.innerWidth, h = window.innerHeight;
+  hctx.clearRect(0,0,w,h);
+  if(MODE==='title' || MODE==='loading') return;
+  if(getB(floor(P.x), floor(eyeY()), floor(P.z))===A.water){
+    hctx.fillStyle = 'rgba(16,48,140,0.38)';
+    hctx.fillRect(0,0,w,h);
+  }
+  // held block ("hand")
+  const held = HOT[SEL];
+  if(held && MODE==='play'){
+    const sw = Math.sin(HAND.swing*Math.PI);
+    const bob = Math.sin(HAND.bob)*7;
+    const size = Math.min(210, h*0.30);
+    hctx.save();
+    hctx.translate(w - size*0.62 - sw*50, h - size*0.50 + Math.abs(bob) + sw*70);
+    hctx.rotate(-0.15 - sw*0.55);
+    drawIcon(hctx, held, -size/2, -size/2, size);
+    hctx.restore();
+  }
+  // crosshair
+  hctx.globalCompositeOperation = 'difference';
+  hctx.fillStyle = '#fff';
+  hctx.fillRect(w/2-1, h/2-9, 2, 18);
+  hctx.fillRect(w/2-9, h/2-1, 18, 2);
+  hctx.globalCompositeOperation = 'source-over';
+  // hotbar
+  const slot = 47, x0 = w/2 - slot*4.5, y0 = h - slot - 8;
+  for(let i=0;i<9;i++){
+    const x = x0 + i*slot;
+    hctx.fillStyle = 'rgba(8,8,10,0.55)';
+    hctx.fillRect(x, y0, slot-4, slot-4);
+    hctx.strokeStyle = i===SEL ? '#fff' : 'rgba(120,120,120,0.8)';
+    hctx.lineWidth = i===SEL ? 3 : 2;
+    hctx.strokeRect(x, y0, slot-4, slot-4);
+    if(HOT[i]) drawIcon(hctx, HOT[i], x+4, y0+4, slot-12);
+  }
+  // toasts
+  hctx.textAlign = 'center';
+  hctx.font = 'bold 15px monospace';
+  for(let i=0;i<TOASTS.length;i++){
+    const T = TOASTS[i];
+    T.t -= dt;
+    const a = clamp01(T.t/0.5);
+    hctx.fillStyle = 'rgba(0,0,0,'+(0.5*a)+')';
+    const yy = y0 - 26 - (TOASTS.length-1-i)*24;
+    const tw = hctx.measureText(T.m).width;
+    hctx.fillRect(w/2-tw/2-8, yy-15, tw+16, 21);
+    hctx.fillStyle = 'rgba(255,255,255,'+a+')';
+    hctx.fillText(T.m, w/2, yy);
+  }
+  for(let i=TOASTS.length-1;i>=0;i--) if(TOASTS[i].t<=0) TOASTS.splice(i,1);
+  hctx.textAlign = 'left';
+  // debug overlay
+  if(dbg){
+    const d = lookDir();
+    const dirN = Math.abs(d[0])>Math.abs(d[2]) ? (d[0]>0?'east (+X)':'west (-X)') : (d[2]>0?'south (+Z)':'north (-Z)');
+    const tt = (W.time/DAYLEN)%1;
+    const hh = floor(((tt+0.25)%1)*24), mm = floor((((tt+0.25)%1)*24%1)*60);
+    let dirty=0; for(const c of W.chunks.values()) if(c.dirty) dirty++;
+    const bio = terrainCol(floor(P.x), floor(P.z)).biome;
+    const lines = [
+      'fps '+fps+'  ('+frameMs.toFixed(1)+' ms)',
+      'xyz '+P.x.toFixed(2)+' / '+P.y.toFixed(2)+' / '+P.z.toFixed(2),
+      'chunk '+(floor(P.x)>>4)+' '+(floor(P.z)>>4)+'   facing '+dirN,
+      'biome '+bio+'   time '+hh+':'+String(mm).padStart(2,'0'),
+      'light sky '+getSky(floor(P.x),floor(P.y),floor(P.z))+' / blk '+getBlkL(floor(P.x),floor(P.y),floor(P.z)),
+      'chunks '+W.chunks.size+' (dirty '+dirty+')   lightQ '+lightPending(),
+      'draws '+drawCalls+'   tris '+(triCount/1000).toFixed(1)+'k   parts '+PARTS.length,
+      'seed '+SEED+'   fly '+P.fly+'   ground '+P.onGround,
+    ];
+    hctx.font = '12px monospace';
+    hctx.fillStyle = 'rgba(0,0,0,0.45)';
+    hctx.fillRect(6, 6, 320, lines.length*16+10);
+    hctx.fillStyle = '#fff';
+    lines.forEach((l,i)=>hctx.fillText(l, 12, 22+i*16));
+  }
+}
+
+// ============================================================ save / load
+function saveWorld(){
+  try {
+    const edits = {};
+    for(const [k,m] of W.edits) edits[k] = Array.from(m);
+    localStorage.setItem('mc1_save', JSON.stringify({
+      v:1, seed:SEED, time:W.time,
+      player:{x:P.x, y:P.y, z:P.z, yaw:P.yaw, pitch:P.pitch, fly:P.fly},
+      hot:HOT.slice(), sel:SEL, edits,
+    }));
+    W.editsDirty = false;
+    return true;
+  } catch(e){ return false; }
+}
+function loadSaveData(){
+  try { return JSON.parse(localStorage.getItem('mc1_save')); } catch(e){ return null; }
+}
+function saveOpts(){
+  try { localStorage.setItem('mc1_opts', JSON.stringify(OPT)); } catch(e){}
+}
+function loadOpts(){
+  try { Object.assign(OPT, JSON.parse(localStorage.getItem('mc1_opts'))||{}); } catch(e){}
+  OPT.rd = clamp(OPT.rd||6, 3, 9);
+}
+
+// ============================================================ chunk streaming
+const SPIRAL = [];
+for(let dz=-11; dz<=11; dz++) for(let dx=-11; dx<=11; dx++){
+  const d = Math.hypot(dx,dz);
+  if(d<=11) SPIRAL.push([dx,dz,d]);
+}
+SPIRAL.sort((a,b)=>a[2]-b[2]);
+
+function ensureChunks(budget){
+  const t0 = performance.now();
+  const pcx = floor(P.x)>>4, pcz = floor(P.z)>>4;
+  for(const s of SPIRAL){
+    if(s[2] > OPT.rd+1) break;
+    const ch = chunkAt(pcx+s[0], pcz+s[1]);
+    if(!ch || !ch.gen){
+      ensureChunk(pcx+s[0], pcz+s[1]);
+      if(performance.now()-t0 > budget) return;
+    }
+  }
+}
+const _meshList = [];
+function meshSome(budget){
+  const t0 = performance.now();
+  const pcx = floor(P.x)>>4, pcz = floor(P.z)>>4;
+  _meshList.length = 0;
+  for(const ch of W.chunks.values()){
+    if(!ch.gen || !ch.dirty) continue;
+    const d = Math.hypot(ch.cx-pcx, ch.cz-pcz);
+    if(d <= OPT.rd+0.5){ ch._d = d; _meshList.push(ch); }
+  }
+  _meshList.sort((a,b)=>a._d-b._d);
+  for(const ch of _meshList){
+    buildMesh(ch);
+    if(performance.now()-t0 > budget) break;
+  }
+}
+function unloadFar(){
+  const pcx = floor(P.x)>>4, pcz = floor(P.z)>>4;
+  for(const [k,ch] of W.chunks){
+    if(Math.hypot(ch.cx-pcx, ch.cz-pcz) > OPT.rd+3){
+      freeChunkGL(ch);
+      W.chunks.delete(k);
+    }
+  }
+}
+function updateWaterTex(){
+  actx.drawImage(waterFrames[waterFrameI], 144, 0);
+  gl.bindTexture(gl.TEXTURE_2D, texAtlas);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 144, 0, gl.RGBA, gl.UNSIGNED_BYTE, waterFrames[waterFrameI]);
+}
+
+// ============================================================ world lifecycle
+let WORLD_READY = false;
+let LOAD = null;
+function startWorld(seedStr, save){
+  for(const ch of W.chunks.values()) freeChunkGL(ch);
+  W.chunks.clear(); W.edits.clear();
+  qSA.length=0; qSR.length=0; qBA.length=0; qBR.length=0;
+  hSA=hSR=hBA=hBR=0;
+  PARTS.length = 0; TOASTS.length = 0;
+  MINE.target = null; MINE.progress = 0;
+  if(save){
+    setSeed(save.seed);
+    W.time = save.time || 0.28*DAYLEN;
+    for(const k in save.edits||{}) W.edits.set(k, new Map(save.edits[k]));
+    const p = save.player;
+    P.x=p.x; P.y=p.y; P.z=p.z; P.yaw=p.yaw; P.pitch=p.pitch; P.fly=!!p.fly;
+    P.vx=P.vy=P.vz=0;
+    if(Array.isArray(save.hot)) save.hot.forEach((v,i)=>{ if(i<9) HOT[i]=v; });
+    SEL = save.sel|0;
+    P.spawn = [P.x, P.y, P.z];
+    LOAD = { phase:'gen', isNew:false };
+  } else {
+    const asNum = /^-?\d+$/.test(seedStr) ? parseInt(seedStr,10) : strHash(seedStr);
+    setSeed(asNum);
+    W.time = 0.28*DAYLEN;
+    const sxz = pickSpawnXZ();
+    P.x=sxz[0]+0.5; P.y=90; P.z=sxz[1]+0.5; P.yaw=0.6; P.pitch=-0.1; P.fly=false;
+    P.vx=P.vy=P.vz=0;
+    HOT.splice(0,9, A.grass, A.dirt, A.stone, A.cobble, A.planks, A.log, A.glass, A.torch, A.water);
+    SEL = 0;
+    LOAD = { phase:'gen', isNew:true, seedStr };
+  }
+  W.editsDirty = false;
+  WORLD_READY = true;
+  setMode('loading');
+}
+function pickSpawnXZ(){
+  // analytic search over the terrain function — no chunks needed
+  for(let r=0; r<=2400; r+=24){
+    const steps = Math.max(1, Math.round(r*0.26));
+    for(let a=0; a<steps; a++){
+      const ang = a/steps*Math.PI*2;
+      const x = Math.round(Math.cos(ang)*r), z = Math.round(Math.sin(ang)*r);
+      const t = terrainCol(x,z);
+      if(t.h > SEA+1 && t.biome!=='beach' && t.biome!=='mountain') return [x,z];
+    }
+  }
+  return [8,8];
+}
+function findSpawn(){
+  const bx = floor(P.x), bz = floor(P.z);
+  let dryFallback = null;
+  for(let r=0; r<=96; r+=4){
+    const steps = Math.max(1, Math.round(r*0.8));
+    for(let a=0; a<steps; a++){
+      const ang = a/steps*Math.PI*2;
+      const x = bx + Math.round(Math.cos(ang)*r);
+      const z = bz + Math.round(Math.sin(ang)*r);
+      let y = H-1;
+      for(; y>0; y--){ const id = getB(x,y,z); if(id!==A.air && BLOCKS[id].kind!==3 && BLOCKS[id].kind!==4) break; }
+      const top = getB(x,y,z);
+      if(top===A.water || y < SEA) continue;
+      if(top===A.grass || top===A.sand || top===A.snowgrass){
+        P.x = x+0.5; P.y = y+1.05; P.z = z+0.5;
+        P.spawn = [P.x, P.y, P.z];
+        return;
+      }
+      if(!dryFallback) dryFallback = [x,y,z];
+    }
+  }
+  if(dryFallback){
+    P.x = dryFallback[0]+0.5; P.y = dryFallback[1]+1.05; P.z = dryFallback[2]+0.5;
+  } else {
+    P.x = bx+0.5; P.y = SEA+2; P.z = bz+0.5;   // all ocean: tread water
+  }
+  P.spawn = [P.x, P.y, P.z];
+}
+function loadingTick(){
+  const t0 = performance.now();
+  const pcx = floor(P.x)>>4, pcz = floor(P.z)>>4;
+  const R = OPT.rd+1;
+  if(LOAD.phase==='gen'){
+    let total=0, done=0;
+    for(const s of SPIRAL){
+      if(s[2] > R) break;
+      total++;
+      const ch = chunkAt(pcx+s[0], pcz+s[1]);
+      if(ch && ch.gen){ done++; continue; }
+      if(performance.now()-t0 < 12){ ensureChunk(pcx+s[0], pcz+s[1]); done++; }
+    }
+    $('loadtext').textContent = 'Generating terrain…';
+    $('loadbar').style.width = (done/total*45)+'%';
+    if(done>=total){
+      if(LOAD.isNew) findSpawn();
+      LOAD.phase = 'light';
+    }
+  } else if(LOAD.phase==='light'){
+    $('loadtext').textContent = 'Computing light…';
+    $('loadbar').style.width = '55%';
+    processLight(250000);
+    if(lightPending()===0) LOAD.phase = 'mesh';
+  } else if(LOAD.phase==='mesh'){
+    let total=0, done=0;
+    for(const s of SPIRAL){
+      if(s[2] > OPT.rd+0.5) break;
+      total++;
+      const ch = chunkAt(pcx+s[0], pcz+s[1]);
+      if(!ch || !ch.dirty){ done++; continue; }
+      if(performance.now()-t0 < 12){ buildMesh(ch); done++; }
+    }
+    $('loadtext').textContent = 'Building meshes…';
+    $('loadbar').style.width = (55+done/total*45)+'%';
+    if(done>=total){
+      LOAD = null;
+      setMode('play');
+      toast('Seed: '+SEED);
+      toast('Welcome! Press E for blocks, G for debug');
+    }
+  }
+}
+
+// ============================================================ menus
+function updateContinue(){
+  $('btnContinue').classList.toggle('hidden', !loadSaveData());
+}
+function syncPauseUI(){
+  $('rngRD').value = OPT.rd;       $('outRD').value = OPT.rd;
+  $('rngSens').value = OPT.sens;   $('outSens').value = OPT.sens.toFixed(2);
+  $('rngVol').value = OPT.vol;     $('outVol').value = OPT.vol.toFixed(2);
+  const t = (W.time/DAYLEN)%1;
+  $('rngTime').value = t.toFixed(3); $('outTime').value = t.toFixed(2);
+}
+function wireMenus(){
+  const splashes = ['Also try the real thing!','100% client-side!','One file!','Procedural pixels!','No dependencies!','Flood-fill lighting!','Now with torches!','Punch trees!','Made by Claude!'];
+  $('splash').textContent = splashes[floor(Math.random()*splashes.length)];
+  $('btnNew').onclick = () => {
+    audioInit(); requestLock();
+    const sv = $('seed').value.trim();
+    startWorld(sv || String(floor(Math.random()*1e9)), null);
+  };
+  $('btnContinue').onclick = () => {
+    audioInit(); requestLock();
+    const s = loadSaveData();
+    if(s) startWorld(null, s); else updateContinue();
+  };
+  $('btnResume').onclick = () => { setMode('play'); requestLock(); };
+  $('btnSave').onclick = e => {
+    e.target.textContent = saveWorld() ? 'Saved ✓' : 'Save failed ✗';
+    setTimeout(()=>{ e.target.textContent = 'Save World'; }, 1200);
+  };
+  $('btnQuit').onclick = () => { saveWorld(); WORLD_READY=false; setMode('title'); updateContinue(); };
+  $('rngRD').oninput = e => { OPT.rd = +e.target.value; $('outRD').value = OPT.rd; saveOpts(); };
+  $('rngSens').oninput = e => { OPT.sens = +e.target.value; $('outSens').value = OPT.sens.toFixed(2); saveOpts(); };
+  $('rngVol').oninput = e => { OPT.vol = +e.target.value; $('outVol').value = OPT.vol.toFixed(2); applyVol(); saveOpts(); };
+  $('rngTime').oninput = e => { W.time = (+e.target.value)*DAYLEN; $('outTime').value = (+e.target.value).toFixed(2); };
+  window.addEventListener('beforeunload', () => { if(WORLD_READY) saveWorld(); });
+  document.addEventListener('visibilitychange', () => { if(document.hidden && WORLD_READY) saveWorld(); });
+}
+
+// ============================================================ main loop
+let lastT = performance.now(), acc = 0;
+let fps = 0, fpsC = 0, fpsT = 0, frameMs = 0;
+let unloadTimer = 0, autosaveT = 0;
+function frame(){
+  requestAnimationFrame(frame);
+  const f0 = performance.now();
+  let dt = (f0-lastT)/1000;
+  lastT = f0;
+  if(dt > 0.1) dt = 0.1;
+  fpsC++; fpsT += dt;
+  if(fpsT >= 0.5){ fps = Math.round(fpsC/fpsT); fpsC = 0; fpsT = 0; }
+  resize();
+  if(MODE==='loading' && LOAD){ loadingTick(); return; }
+  if(!WORLD_READY){ drawHUD(dt); return; }
+
+  const active = MODE==='play' || MODE==='palette';
+  if(active){
+    W.time += dt;
+    acc += dt;
+    let n = 0;
+    while(acc >= 1/60 && n < 6){ physics(1/60); acc -= 1/60; n++; }
+    if(acc >= 1/60) acc = 0;
+    raycast();
+    mineUpdate(dt);
+    if(MB.r && MODE==='play'){ placeTimer -= dt; if(placeTimer<=0){ tryPlace(); placeTimer = 0.25; } }
+    updateParticles(dt);
+    waterTimer += dt;
+    if(waterTimer > 0.25){ waterTimer = 0; waterFrameI = (waterFrameI+1)%4; updateWaterTex(); }
+  }
+  ensureChunks(4);
+  processLight(40000);
+  meshSome(5);
+  unloadTimer += dt;
+  if(unloadTimer > 2){ unloadTimer = 0; unloadFar(); }
+  autosaveT += dt;
+  if(autosaveT > 20){ autosaveT = 0; if(W.editsDirty && WORLD_READY) saveWorld(); }
+  render(P.x, eyeY(), P.z);
+  drawHUD(dt);
+  frameMs = lerp(frameMs, performance.now()-f0, 0.05);
+}
+
+// ============================================================ boot + errors + debug api
+function showErr(msg){
+  UI.err.textContent = 'Error:\n\n' + msg;
+  UI.err.classList.remove('hidden');
+}
+window.addEventListener('error', e => showErr(e.message + '\n' + (e.filename||'') + ':' + (e.lineno||'')));
+
+function boot(){
+  loadOpts();
+  buildAtlas();
+  buildWaterFrames();
+  buildClouds();
+  buildIcons();
+  glInit();
+  resize();
+  const bg = document.createElement('canvas'); bg.width = bg.height = 64;
+  const bctx = bg.getContext('2d');
+  bctx.imageSmoothingEnabled = false;
+  bctx.drawImage(ATLAS, 32,0,16,16, 0,0,64,64);
+  bctx.fillStyle = 'rgba(0,0,0,0.55)';
+  bctx.fillRect(0,0,64,64);
+  document.body.style.background = '#000 url('+bg.toDataURL()+') repeat';
+  wireMenus();
+  updateContinue();
+  setMode('title');
+  requestAnimationFrame(frame);
+}
+
+window.__mc = {
+  start(seed){ NOLOCK = true; startWorld(String(seed===undefined?'claude':seed), null); },
+  resume(){ NOLOCK = true; const s = loadSaveData(); if(s) startWorld(null, s); return !!s; },
+  ready(){ return WORLD_READY && MODE==='play'; },
+  mode(){ return MODE; },
+  stats(){
+    let dirty=0; for(const c of W.chunks.values()) if(c.dirty) dirty++;
+    return { fps, frameMs:+frameMs.toFixed(2), chunks:W.chunks.size, dirty, lightQ:lightPending(),
+             draws:drawCalls, tris:triCount, parts:PARTS.length,
+             pos:[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2)], mode:MODE, seed:SEED };
+  },
+  tp(x,y,z){ P.x=x; P.y=y; P.z=z; P.vx=P.vy=P.vz=0; },
+  look(yaw,pitch){ P.yaw=yaw; P.pitch=pitch; },
+  setTime(t){ W.time = t*DAYLEN; },
+  fly(v){ P.fly = v===undefined ? !P.fly : !!v; },
+  getBlock:(x,y,z)=>getB(x,y,z),
+  light:(x,y,z)=>[getSky(x,y,z), getBlkL(x,y,z)],
+  setBlock:(x,y,z,id)=>setB(x,y,z,id,true),
+  mine(){ raycast(); if(RAY.hit) return breakBlock(RAY.bx,RAY.by,RAY.bz); return false; },
+  place(){ raycast(); return tryPlace(); },
+  hot(i,id){ HOT[i]=id; }, sel(i){ SEL = clamp(i,0,8); },
+  key(code,down){ KEY[code] = !!down; },
+  save: ()=>saveWorld(),
+  blocks:A, ray:RAY, player:P, world:W,
+  _g(){ return { gl, PRG_K, PRG_C, texCloud, texAtlas, bufCloud, mPV, SKY, terrainCol }; },
+};
+
+try { boot(); } catch(e){ showErr(e.message + '\n' + (e.stack||'')); }
+
+})();
+</script>
+</body>
+</html>

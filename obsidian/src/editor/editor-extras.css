@@ -1,0 +1,147 @@
+/* ---------- editor extras: wikilink autocomplete + hover preview ---------- */
+
+/* revealed (raw syntax) links place the cursor on click */
+.cm-link.cm-link-revealed { cursor: text; }
+
+/* ---------- autocomplete tooltip (matches .menu) ---------- */
+.cm-tooltip.cm-tooltip-autocomplete {
+  background: #262626;
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  padding: 5px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  font-family: var(--font-ui);
+}
+.cm-tooltip.cm-tooltip-autocomplete > ul {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  min-width: 240px;
+  max-width: 430px;
+  max-height: 312px;
+}
+.cm-tooltip.cm-tooltip-autocomplete > ul > li {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  color: var(--text-normal);
+  line-height: 1.55;
+  cursor: pointer;
+}
+.cm-tooltip.cm-tooltip-autocomplete > ul > li:hover { background: rgba(255, 255, 255, 0.055); }
+.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
+  background: var(--bg-active);
+  color: #ffffff;
+}
+.cm-tooltip-autocomplete .cm-completionLabel {
+  unicode-bidi: plaintext;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cm-tooltip-autocomplete .cm-completionDetail {
+  margin-inline-start: auto;
+  font-style: normal;
+  font-size: 12px;
+  color: var(--text-faint);
+  unicode-bidi: plaintext;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 45%;
+  flex-shrink: 0;
+}
+.cm-tooltip-autocomplete .cm-completionMatchedText {
+  text-decoration: none;
+  color: var(--accent-hover);
+}
+
+/* ---------- hover page preview ---------- */
+.hover-preview {
+  position: fixed;
+  z-index: 250;
+  width: 420px;
+  max-width: calc(100vw - 24px);
+  max-height: 320px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #262626;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+.hover-preview-title {
+  flex-shrink: 0;
+  padding: 10px 14px 8px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-normal);
+  border-block-end: 1px solid var(--border-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.hover-preview-content {
+  padding: 8px 14px 12px;
+  overflow: hidden;
+  font-family: var(--font-text);
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--text-normal);
+}
+.hover-preview-content > :first-child { margin-block-start: 0; }
+.hover-preview-content h1, .hover-preview-content h2, .hover-preview-content h3,
+.hover-preview-content h4, .hover-preview-content h5, .hover-preview-content h6 {
+  margin: 0.5em 0 0.2em;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--heading-color);
+}
+.hover-preview-content h1 { font-size: 1.3em; }
+.hover-preview-content h2 { font-size: 1.18em; }
+.hover-preview-content h3 { font-size: 1.08em; }
+.hover-preview-content p { margin: 0.3em 0; }
+.hover-preview-content a {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--link-color) 45%, transparent);
+}
+.hover-preview-content a.is-unresolved { color: var(--link-unresolved); }
+.hover-preview-content ul, .hover-preview-content ol {
+  padding-inline-start: 1.5em;
+  margin: 0.25em 0;
+}
+.hover-preview-content li::marker { color: var(--text-faint); }
+.hover-preview-content li.task-list-item { list-style: none; }
+.hover-preview-content blockquote {
+  margin: 0.3em 0;
+  padding-inline-start: 10px;
+  border-inline-start: 2px solid var(--border-strong);
+  color: var(--text-muted);
+}
+.hover-preview-content code {
+  background: var(--code-bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+.hover-preview-content pre {
+  background: var(--code-bg);
+  border-radius: 6px;
+  padding: 7px 10px;
+  overflow: hidden;
+  margin: 0.4em 0;
+}
+.hover-preview-content pre code { background: none; padding: 0; }
+.hover-preview-content table { border-collapse: collapse; margin: 0.4em 0; }
+.hover-preview-content th, .hover-preview-content td {
+  border: 1px solid var(--border-color);
+  padding: 3px 9px;
+  font-size: 0.9em;
+}
+.hover-preview-content img { max-width: 100%; border-radius: 6px; }
+.hover-preview-more, .hover-preview-empty { color: var(--text-faint); }

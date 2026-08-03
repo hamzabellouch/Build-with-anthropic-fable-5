@@ -1,0 +1,263 @@
+/* ====================== The Spread of Islam — styles ====================== */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0d13;
+  --panel: rgba(16, 21, 31, 0.86);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --text: #e8e6df;
+  --dim: #9aa3b2;
+  --green: #2fbf71;
+  --green-soft: rgba(47, 191, 113, 0.35);
+  --gold: #e3b341;
+  --accent: #4f8fe0;
+  font-size: 15px;
+}
+
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+}
+
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* ------------------------------------------------------------- header --- */
+#topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 10px 18px 8px;
+  border-bottom: 1px solid var(--panel-border);
+  background: linear-gradient(180deg, rgba(13,17,26,.95), rgba(13,17,26,.75));
+  z-index: 5;
+}
+h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.25rem; font-weight: 600; letter-spacing: .02em;
+  white-space: nowrap;
+}
+h1 .arabic {
+  font-size: 1.05rem; color: var(--gold); margin-left: 8px;
+  font-weight: 400;
+}
+.subtitle { color: var(--dim); font-size: .78rem; margin-top: 1px; }
+
+.top-right { display: flex; align-items: center; gap: 12px; }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: .74rem; color: var(--dim); }
+.sw { width: 13px; height: 13px; border-radius: 3px; display: inline-block; }
+.sw.core  { background: rgba(47,191,113,.75); }
+.sw.light { background: rgba(47,191,113,.28); }
+.sw.route { background: none; border-top: 2px dashed rgba(227,179,65,.8); height: 0; border-radius: 0; margin-top: 6px;}
+.sw.event { background: var(--gold); border-radius: 50%; width: 9px; height: 9px; box-shadow: 0 0 6px rgba(227,179,65,.9); }
+
+.icon-btn {
+  background: rgba(255,255,255,.06); color: var(--text);
+  border: 1px solid var(--panel-border); border-radius: 50%;
+  width: 30px; height: 30px; cursor: pointer; font-size: .9rem;
+  transition: background .15s;
+}
+.icon-btn:hover { background: rgba(255,255,255,.14); }
+
+/* -------------------------------------------------------------- stage --- */
+#stage {
+  position: relative; flex: 1; min-height: 0;
+  background:
+    radial-gradient(1100px 700px at 32% 42%, #11182a 0%, #0a0d13 60%, #07090d 100%);
+}
+#globe { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#globe.dragging { cursor: grabbing; }
+
+/* side panel */
+#panel {
+  position: absolute; top: 14px; right: 14px; bottom: 14px;
+  width: 320px; max-width: 86vw;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  padding: 18px 18px 12px;
+  display: flex; flex-direction: column; gap: 10px;
+  overflow: hidden;
+  z-index: 4;
+  transition: transform .25s ease, opacity .25s ease;
+}
+#panel.hidden { transform: translateX(110%); opacity: 0; pointer-events: none; }
+
+#panel-toggle { position: absolute; top: 14px; right: 14px; z-index: 5; display: none; }
+
+.year-block { display: flex; align-items: baseline; gap: 8px; }
+#year-big {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 3.1rem; line-height: 1; font-weight: 700;
+  color: #fff; letter-spacing: .01em;
+  font-variant-numeric: tabular-nums;
+}
+#year-suffix { color: var(--dim); font-size: 1rem; }
+
+.era-chip {
+  align-self: flex-start;
+  font-size: .8rem; font-weight: 600; letter-spacing: .04em;
+  padding: 3px 10px; border-radius: 999px;
+  background: rgba(255,255,255,.08); border: 1px solid var(--panel-border);
+}
+.era-blurb { font-size: .8rem; line-height: 1.45; color: #c8cdd8; }
+
+.stats-card {
+  background: rgba(255,255,255,.045);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px; padding: 10px 12px 8px;
+}
+.stat-line { font-size: .92rem; font-weight: 600; }
+.stat-line.dim { color: var(--dim); font-weight: 400; font-size: .8rem; margin-top: 1px; }
+#sparkline { margin-top: 6px; }
+.stat-note { font-size: .65rem; color: #6e7889; margin-top: 2px; }
+
+.events-head {
+  font-size: .72rem; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--gold); margin-top: 2px;
+}
+.events-list { flex: 1; overflow-y: auto; min-height: 60px; padding-right: 4px; }
+.events-list::-webkit-scrollbar { width: 6px; }
+.events-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 3px; }
+.ev {
+  padding: 7px 9px; border-radius: 8px; cursor: pointer;
+  border: 1px solid transparent; margin-bottom: 4px;
+  transition: background .12s;
+}
+.ev:hover { background: rgba(255,255,255,.06); }
+.ev.sel { background: rgba(227,179,65,.10); border-color: rgba(227,179,65,.35); }
+.ev .ev-y { color: var(--gold); font-size: .72rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ev .ev-t { font-size: .82rem; font-weight: 600; }
+.ev .ev-d { font-size: .75rem; color: var(--dim); line-height: 1.4; margin-top: 3px; display: none; }
+.ev.sel .ev-d { display: block; }
+.ev-empty { color: #5d6678; font-size: .78rem; padding: 6px 2px; }
+
+.hint { font-size: .68rem; color: #5d6678; text-align: center; line-height: 1.5; padding-top: 4px; border-top: 1px solid var(--panel-border); }
+
+/* tooltip */
+#tooltip {
+  position: absolute; z-index: 8; pointer-events: none;
+  background: rgba(10, 13, 20, 0.92);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 8px; padding: 7px 10px;
+  font-size: .78rem; line-height: 1.4; max-width: 240px;
+  box-shadow: 0 4px 18px rgba(0,0,0,.5);
+}
+#tooltip .tt-name { font-weight: 700; }
+#tooltip .tt-sub { color: var(--dim); font-size: .72rem; }
+#tooltip .tt-gold { color: var(--gold); font-weight: 700; }
+
+/* ----------------------------------------------------------- controls --- */
+#controls {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 18px 14px;
+  background: linear-gradient(0deg, rgba(13,17,26,.97), rgba(13,17,26,.8));
+  border-top: 1px solid var(--panel-border);
+  z-index: 5;
+}
+.ctrl-left, .ctrl-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.big-btn {
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 1px solid rgba(227,179,65,.5);
+  background: rgba(227,179,65,.12); color: var(--gold);
+  font-size: 1.05rem; cursor: pointer; transition: all .15s;
+}
+.big-btn:hover { background: rgba(227,179,65,.25); }
+.small-btn {
+  height: 30px; min-width: 36px; padding: 0 8px; border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255,255,255,.05); color: var(--dim);
+  font-size: .8rem; cursor: pointer; transition: all .15s;
+}
+.small-btn:hover { background: rgba(255,255,255,.12); color: var(--text); }
+.small-btn.active { color: var(--gold); border-color: rgba(227,179,65,.45); background: rgba(227,179,65,.08); }
+
+.timeline { flex: 1; display: flex; flex-direction: column; gap: 0; min-width: 0; }
+
+#era-strip { display: flex; height: 16px; border-radius: 4px 4px 0 0; overflow: hidden; }
+.era-seg {
+  height: 100%; position: relative; cursor: pointer; opacity: .8;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .15s, filter .15s;
+}
+.era-seg:hover { opacity: 1; filter: brightness(1.25); }
+.era-seg span {
+  font-size: .6rem; font-weight: 700; letter-spacing: .03em; color: rgba(0,0,0,.78);
+  white-space: nowrap; overflow: hidden; text-overflow: clip; padding: 0 4px;
+  user-select: none;
+}
+.era-seg.current { opacity: 1; box-shadow: inset 0 -2px 0 #fff; }
+
+#year-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 18px; background: transparent; cursor: pointer; margin: 0;
+}
+#year-slider::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 0 0 4px 4px;
+  background: rgba(255,255,255,.12);
+}
+#year-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--gold); border: 2px solid #0a0d13;
+  box-shadow: 0 0 10px rgba(227,179,65,.7);
+  margin-top: -6px;
+}
+#year-slider::-moz-range-track { height: 6px; border-radius: 0 0 4px 4px; background: rgba(255,255,255,.12); }
+#year-slider::-moz-range-thumb {
+  width: 15px; height: 15px; border-radius: 50%;
+  background: var(--gold); border: 2px solid #0a0d13;
+  box-shadow: 0 0 10px rgba(227,179,65,.7);
+}
+
+#tick-row { position: relative; height: 13px; }
+.tick {
+  position: absolute; top: 0; transform: translateX(-50%);
+  font-size: .62rem; color: #5d6678; user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.year-readout { display: flex; align-items: center; gap: 4px; color: var(--dim); font-size: .75rem; }
+#year-input {
+  width: 58px; background: rgba(255,255,255,.05); color: var(--text);
+  border: 1px solid var(--panel-border); border-radius: 7px;
+  font-size: .85rem; padding: 4px 6px; text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+#year-input:focus { outline: 1px solid var(--gold); }
+#year-input::-webkit-inner-spin-button { opacity: 1; }
+
+/* -------------------------------------------------------------- modal --- */
+.modal[hidden] { display: none; }
+.modal {
+  position: fixed; inset: 0; z-index: 20;
+  background: rgba(5,7,11,.7); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-card {
+  position: relative; max-width: 620px; max-height: 84vh; overflow-y: auto;
+  background: #121826; border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px; padding: 28px 30px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+}
+.modal-card h2 { font-family: Georgia, serif; margin-bottom: 12px; }
+.modal-card p { font-size: .86rem; line-height: 1.55; margin-bottom: 10px; color: #ccd2dd; }
+.modal-card p.dim { color: #7b8496; font-size: .76rem; }
+.modal-close { position: absolute; top: 12px; right: 12px; }
+
+/* --------------------------------------------------------- responsive --- */
+@media (max-width: 920px) {
+  #panel-toggle { display: block; }
+  #panel { width: 300px; }
+  #panel.hidden ~ #panel-toggle { opacity: 1; }
+  .legend { display: none; }
+  h1 { font-size: 1.02rem; }
+}
+@media (max-width: 640px) {
+  #controls { flex-wrap: wrap; gap: 8px; }
+  .timeline { order: 3; flex-basis: 100%; }
+  .subtitle { display: none; }
+}

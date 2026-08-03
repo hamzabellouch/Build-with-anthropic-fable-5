@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="بايت — قناة تقنية بالعربي. حلقات ومقالات تبسّط الذكاء الاصطناعي والبرمجة والأمن السيبراني وأحدث التقنيات." />
+    <title>بايت | التقنية تتكلّم عربي</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <header class="site-header" id="top">
+      <nav class="nav container">
+        <a class="brand" href="#top" aria-label="بايت — الصفحة الرئيسية">
+          <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+            <defs>
+              <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#22d3ee" />
+                <stop offset="1" stop-color="#34d399" />
+              </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="44" height="44" rx="12" fill="url(#brandGrad)" />
+            <path d="M14 30h-3.5v-3.5H14V30Zm21.5-13v6.2c0 3.8-2.6 6.3-6.6 6.3H18.4c-2.7 0-4.4-1.7-4.4-4.3V21h3.5v3.9c0 .6.3.9.9.9h10.4c2 0 3.1-1 3.1-2.9V17h3.6Z" fill="#06131f" />
+            <circle cx="24" cy="34.5" r="2" fill="#06131f" />
+          </svg>
+          <span class="brand-name">بايت<span class="brand-dot">.</span></span>
+        </a>
+
+        <ul class="nav-links" id="navLinks">
+          <li><a href="#episodes">الحلقات</a></li>
+          <li><a href="#topics">المواضيع</a></li>
+          <li><a href="#articles">المقالات</a></li>
+          <li><a href="#about">من نحن</a></li>
+          <li><a href="#newsletter">النشرة</a></li>
+        </ul>
+
+        <div class="nav-actions">
+          <button class="theme-toggle" id="themeToggle" aria-label="تبديل المظهر" title="تبديل المظهر">
+            <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <a class="btn btn-primary nav-cta" href="#newsletter">اشترك الآن</a>
+          <button class="nav-burger" id="navBurger" aria-label="فتح القائمة" aria-expanded="false">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <!-- ===== Hero ===== -->
+      <section class="hero">
+        <div class="hero-bg" aria-hidden="true"></div>
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <span class="hero-badge">🎙️ قناة تقنية عربية · حلقة جديدة كل أسبوع</span>
+            <h1>
+              التقنية تتكلّم
+              <span class="text-gradient">عربي</span>
+            </h1>
+            <p class="hero-sub">
+              «بايت» قناة تبسّط لك عالم الذكاء الاصطناعي والبرمجة والأمن السيبراني —
+              بلغة عربية واضحة، وبدون تعقيد. بايت واحد في كل مرة.
+            </p>
+            <div class="hero-actions">
+              <a class="btn btn-primary" href="#episodes">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5-11-6.5Z" fill="currentColor"/></svg>
+                شاهد أحدث الحلقات
+              </a>
+              <a class="btn btn-ghost" href="#about">تعرّف علينا</a>
+            </div>
+            <dl class="hero-stats">
+              <div><dt>+٢٥٠</dt><dd>حلقة منشورة</dd></div>
+              <div><dt>١٫٢ مليون</dt><dd>مشترك</dd></div>
+              <div><dt>+٤٠ مليون</dt><dd>مشاهدة</dd></div>
+            </dl>
+          </div>
+
+          <div class="hero-visual" aria-hidden="true">
+            <div class="terminal" dir="ltr">
+              <div class="terminal-bar">
+                <span class="dot dot-r"></span>
+                <span class="dot dot-y"></span>
+                <span class="dot dot-g"></span>
+                <span class="terminal-title">bayt.sh</span>
+              </div>
+              <div class="terminal-body" dir="rtl">
+                <p><span class="prompt">$</span> ./شغّل_الحلقة --الموضوع "الذكاء الاصطناعي"</p>
+                <p class="t-dim">⠿ جارٍ تحميل المعرفة...</p>
+                <p class="t-ok">✓ تمّ التبسيط بنجاح</p>
+                <p><span class="prompt">$</span> <span id="typeTarget"></span><span class="cursor">▌</span></p>
+              </div>
+            </div>
+            <div class="hero-chip chip-a">٠١٠١ بايت ٠١٠١</div>
+            <div class="hero-chip chip-b">&lt;/&gt; بالعربي</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Episodes ===== -->
+      <section class="section" id="episodes">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <span class="section-kicker">المكتبة</span>
+              <h2>أحدث الحلقات</h2>
+            </div>
+            <div class="filters" id="filters" role="tablist" aria-label="تصفية الحلقات"></div>
+          </div>
+          <div class="cards-grid" id="episodesGrid"></div>
+        </div>
+      </section>
+
+      <!-- ===== Topics ===== -->
+      <section class="section section-alt" id="topics">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <span class="section-kicker">ماذا نغطّي؟</span>
+              <h2>مواضيع نعشقها</h2>
+            </div>
+          </div>
+          <div class="topics-grid" id="topicsGrid"></div>
+        </div>
+      </section>
+
+      <!-- ===== Articles ===== -->
+      <section class="section" id="articles">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <span class="section-kicker">المدوّنة</span>
+              <h2>مقالات مختارة</h2>
+            </div>
+            <a class="btn btn-ghost btn-sm" href="#articles">كل المقالات ←</a>
+          </div>
+          <div class="articles-grid" id="articlesGrid"></div>
+        </div>
+      </section>
+
+      <!-- ===== About ===== -->
+      <section class="section section-alt" id="about">
+        <div class="container about-grid">
+          <div>
+            <span class="section-kicker">من نحن</span>
+            <h2>لماذا «بايت»؟</h2>
+            <p class="about-lead">
+              لأن المعرفة التقنية تُبنى بايتاً بايتاً. بدأنا «بايت» عام ٢٠٢١ بهدف واحد:
+              أن يجد المتحدث بالعربية محتوى تقنياً عميقاً وممتعاً بلغته الأم،
+              دون أن يضطر للبحث في محتوى أجنبي معقّد.
+            </p>
+            <ul class="about-points">
+              <li><strong>تبسيط بلا تسطيح</strong> — نشرح المفاهيم المعقدة بعمق، لكن بلغة يفهمها الجميع.</li>
+              <li><strong>محتوى أصلي بالعربي</strong> — لا نترجم، بل نصنع محتوى من قلب واقعنا العربي.</li>
+              <li><strong>مجتمع قبل كل شيء</strong> — نقاشات أسبوعية ومراجعات مشاريع لمتابعينا.</li>
+            </ul>
+          </div>
+          <div class="about-card">
+            <svg class="about-logo" viewBox="0 0 48 48" aria-hidden="true">
+              <rect x="2" y="2" width="44" height="44" rx="12" fill="url(#brandGrad)" />
+              <path d="M14 30h-3.5v-3.5H14V30Zm21.5-13v6.2c0 3.8-2.6 6.3-6.6 6.3H18.4c-2.7 0-4.4-1.7-4.4-4.3V21h3.5v3.9c0 .6.3.9.9.9h10.4c2 0 3.1-1 3.1-2.9V17h3.6Z" fill="#06131f" />
+              <circle cx="24" cy="34.5" r="2" fill="#06131f" />
+            </svg>
+            <blockquote>
+              «هدفنا أن تكون اللغة العربية لغةً تُشرح بها التقنية،
+              لا لغةً تُترجم إليها فقط.»
+            </blockquote>
+            <cite>— فريق بايت</cite>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Newsletter ===== -->
+      <section class="section" id="newsletter">
+        <div class="container">
+          <div class="newsletter-card">
+            <div class="newsletter-copy">
+              <h2>نشرة «بايت» الأسبوعية 📬</h2>
+              <p>خلاصة أهم أخبار التقنية، وأدوات نرشّحها، وملخص الحلقة الجديدة — كل يوم جمعة في بريدك.</p>
+            </div>
+            <form class="newsletter-form" id="newsletterForm" novalidate>
+              <label class="sr-only" for="emailInput">البريد الإلكتروني</label>
+              <input id="emailInput" type="email" placeholder="بريدك الإلكتروني" required />
+              <button class="btn btn-primary" type="submit">اشترك مجاناً</button>
+              <p class="newsletter-msg" id="newsletterMsg" role="status"></p>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div class="footer-brand">
+          <a class="brand" href="#top">
+            <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+              <rect x="2" y="2" width="44" height="44" rx="12" fill="url(#brandGrad)" />
+              <path d="M14 30h-3.5v-3.5H14V30Zm21.5-13v6.2c0 3.8-2.6 6.3-6.6 6.3H18.4c-2.7 0-4.4-1.7-4.4-4.3V21h3.5v3.9c0 .6.3.9.9.9h10.4c2 0 3.1-1 3.1-2.9V17h3.6Z" fill="#06131f" />
+              <circle cx="24" cy="34.5" r="2" fill="#06131f" />
+            </svg>
+            <span class="brand-name">بايت<span class="brand-dot">.</span></span>
+          </a>
+          <p>قناة تقنية عربية — التقنية تتكلّم عربي.</p>
+          <div class="socials" id="socials"></div>
+        </div>
+        <div>
+          <h3>الموقع</h3>
+          <ul>
+            <li><a href="#episodes">الحلقات</a></li>
+            <li><a href="#topics">المواضيع</a></li>
+            <li><a href="#articles">المقالات</a></li>
+            <li><a href="#about">من نحن</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>تواصل</h3>
+          <ul>
+            <li><a href="mailto:hello@bayt.tech">hello@bayt.tech</a></li>
+            <li><a href="#newsletter">النشرة البريدية</a></li>
+            <li><a href="#top">اقترح موضوعاً</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="container footer-bottom">
+        <p>© <span id="year"></span> بايت. صُنع بحب في العالم العربي 💚</p>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

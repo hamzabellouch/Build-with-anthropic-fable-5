@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blockcraft — one-file Minecraft</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>⛏️</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;user-select:none;-webkit-user-select:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:crosshair}
+#cross{position:fixed;left:50%;top:50%;width:18px;height:18px;transform:translate(-50%,-50%);pointer-events:none;mix-blend-mode:difference}
+#cross::before,#cross::after{content:'';position:absolute;background:#fff}
+#cross::before{left:8px;top:0;width:2px;height:18px}
+#cross::after{left:0;top:8px;width:18px;height:2px}
+#info{position:fixed;top:8px;left:10px;color:#fff;font:12px/1.55 monospace;text-shadow:0 1px 2px #000;pointer-events:none;white-space:pre}
+#hotbar{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:4px;padding:4px;background:rgba(0,0,0,.45);border-radius:6px}
+.slot{width:46px;height:46px;border:2px solid #565656;border-radius:4px;background:rgba(0,0,0,.5);position:relative;display:flex;align-items:center;justify-content:center}
+.slot.sel{border-color:#fff;box-shadow:0 0 8px rgba(255,255,255,.5)}
+.slot canvas{width:36px;height:36px;image-rendering:pixelated}
+.slot span{position:absolute;top:1px;left:3px;font:10px monospace;color:#ccc;text-shadow:0 1px 1px #000}
+#toast{position:fixed;bottom:74px;left:50%;transform:translateX(-50%);color:#fff;font:bold 14px monospace;text-shadow:0 1px 3px #000;opacity:0;transition:opacity .35s;pointer-events:none}
+#tint{position:fixed;inset:0;pointer-events:none;background:rgba(15,40,120,.35);display:none}
+#overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,10,18,.55);backdrop-filter:blur(3px);cursor:pointer;color:#fff;text-align:center;z-index:5}
+#overlay h1{font:bold 42px monospace;letter-spacing:5px;text-shadow:3px 3px 0 rgba(0,0,0,.5)}
+#overlay .sub{font:13px monospace;color:#bcd;margin-top:6px}
+#overlay table{margin:20px auto 4px;font:13px monospace;border-spacing:16px 4px;color:#ddd;text-align:left}
+#overlay table td:nth-child(odd){color:#9ab;text-align:right}
+#overlay .play{margin-top:14px;font:bold 16px monospace;animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.4}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="info"></div>
+<div id="cross"></div>
+<div id="tint"></div>
+<div id="toast"></div>
+<div id="hotbar"></div>
+<div id="overlay">
+  <h1>⛏ BLOCKCRAFT</h1>
+  <div class="sub">an infinite voxel world in a single HTML file — no libraries, works offline</div>
+  <table>
+    <tr><td>Move</td><td>W A S D</td><td>Jump / Swim</td><td>Space</td></tr>
+    <tr><td>Look</td><td>Mouse</td><td>Sprint</td><td>Shift</td></tr>
+    <tr><td>Break</td><td>Left click</td><td>Place</td><td>Right click</td></tr>
+    <tr><td>Pick block</td><td>Middle click</td><td>Select</td><td>1–9 / wheel</td></tr>
+    <tr><td>Fly</td><td>F or 2× Space</td><td>Fly up / down</td><td>Space / Shift</td></tr>
+    <tr><td>Pause</td><td>Esc</td><td></td><td></td></tr>
+  </table>
+  <div class="play" id="playmsg">— click to play —</div>
+</div>
+<script>
+'use strict';
+// ============================== config ==============================
+const CS=16, CH=96, RD=5, SEA=30, DAY=480;
+const SEED=(Math.random()*0x7fffffff)|0;
+
+// ============================== noise ==============================
+function hash2(x,z){
+  let h=(Math.imul(x|0,374761393)+Math.imul(z|0,668265263)+SEED)|0;
+  h=Math.imul(h^(h>>>13),1274126177);
+  h^=h>>>16;
+  return (h>>>0)/4294967296;
+}
+function noise2(x,z){
+  const xi=Math.floor(x),zi=Math.floor(z),xf=x-xi,zf=z-zi;
+  const u=xf*xf*(3-2*xf),v=zf*zf*(3-2*zf);
+  const a=hash2(xi,zi),b=hash2(xi+1,zi),c=hash2(xi,zi+1),d=hash2(xi+1,zi+1);
+  return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;
+}
+function fbm(x,z,oct){
+  let amp=1,f=1,sum=0,norm=0;
+  for(let i=0;i<oct;i++){sum+=noise2(x*f,z*f)*amp;norm+=amp;amp*=0.5;f*=2;}
+  return sum/norm;
+}
+function groundH(x,z){
+  const m=fbm(x*0.0035+7777,z*0.0035-3333,3);
+  const h=fbm(x*0.012,z*0.012,4);
+  return (16+h*14+Math.pow(m,2.6)*64)|0;
+}
+
+// ============================== blocks ==============================
+const AIR=0,GRASS=1,DIRT=2,STONE=3,SAND=4,LOG=5,LEAVES=6,PLANKS=7,GLASS=8,BRICK=9,WATER=10,SNOW=11,BEDROCK=12;
+const BLOCK={
+  [GRASS]:{n:'Grass',t:[0,1,2]},
+  [DIRT]:{n:'Dirt',t:[2,2,2]},
+  [STONE]:{n:'Stone',t:[3,3,3]},
+  [SAND]:{n:'Sand',t:[4,4,4]},
+  [LOG]:{n:'Wood Log',t:[6,5,6]},
+  [LEAVES]:{n:'Leaves',t:[7,7,7],cut:1},
+  [PLANKS]:{n:'Planks',t:[8,8,8]},
+  [GLASS]:{n:'Glass',t:[9,9,9],trans:1},
+  [BRICK]:{n:'Bricks',t:[10,10,10]},
+  [WATER]:{n:'Water',t:[11,11,11],fluid:1},
+  [SNOW]:{n:'Snow',t:[12,13,2]},
+  [BEDROCK]:{n:'Bedrock',t:[14,14,14]},
+};
+const OPQ=[],SOLID=[];
+for(let i=0;i<=12;i++){const b=BLOCK[i];OPQ[i]=!!b&&!b.cut&&!b.trans&&!b.fluid;SOLID[i]=!!b&&!b.fluid;}
+const HOT=[GRASS,DIRT,STONE,SAND,LOG,LEAVES,PLANKS,GLASS,BRICK];
+
+// ============================== texture atlas (procedural pixel art) ==============================
+const atlas=document.createElement('canvas');atlas.width=atlas.height=256;
+const ac=atlas.getContext('2d');
+function mul32(seed){
+  let s=seed>>>0;
+  return function(){
+    s=(s+0x6D2B79F5)>>>0;
+    let t=Math.imul(s^(s>>>15),1|s);
+    t=(t+Math.imul(t^(t>>>7),61|t))^t;
+    return ((t^(t>>>14))>>>0)/4294967296;
+  };
+}
+function paint(idx,fn){
+  const ox=(idx&15)*16,oy=(idx>>4)*16,R=mul32(idx*1337+7);
+  for(let y=0;y<16;y++)for(let x=0;x<16;x++){
+    const c=fn(x,y,R);
+    if(!c)continue;
+    ac.fillStyle='rgba('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+','+(c[3]===undefined?1:c[3])+')';
+    ac.fillRect(ox+x,oy+y,1,1);
+  }
+}
+function jit(c,j,R){const v=(R()-0.5)*2*j;return[c[0]+v,c[1]+v,c[2]+v];}
+const GRASS_C=[106,167,64],DIRT_C=[134,96,67],BARK_C=[109,85,50],SNOW_C=[236,242,248];
+paint(0,(x,y,R)=>jit(GRASS_C,14,R));                                        // grass top
+paint(1,(x,y,R)=>{                                                          // grass side
+  if(y<1||(y<2&&R()<0.7)||(y<3&&R()<0.3))return jit(GRASS_C,14,R);
+  return jit(DIRT_C,13,R);
+});
+paint(2,(x,y,R)=>jit(DIRT_C,13,R));                                         // dirt
+paint(3,(x,y,R)=>{const c=jit([127,127,127],11,R);return R()<0.08?[c[0]-25,c[1]-25,c[2]-25]:c;}); // stone
+paint(4,(x,y,R)=>jit([218,205,160],12,R));                                  // sand
+paint(5,(x,y,R)=>{const s=(x%4===0||R()<0.1)?-24:0;return jit([BARK_C[0]+s,BARK_C[1]+s,BARK_C[2]+s],9,R);}); // log side
+paint(6,(x,y,R)=>{                                                          // log top (rings)
+  const d=Math.max(Math.abs(x-7.5),Math.abs(y-7.5));
+  if(d>6.5)return jit(BARK_C,9,R);
+  return ((d|0)%2)?jit([146,116,74],7,R):jit([176,142,90],7,R);
+});
+paint(7,(x,y,R)=>{                                                          // leaves (cutout)
+  if(R()<0.16)return[0,0,0,0];
+  const g=jit([58,138,42],17,R);
+  return R()<0.12?[g[0]-20,g[1]-30,g[2]-12]:g;
+});
+paint(8,(x,y,R)=>{                                                          // planks
+  const seam=(((y>>2)*5+3)&15);
+  if(y%4===3||x===seam)return jit([114,90,52],7,R);
+  return jit([162,130,78],10,R);
+});
+paint(9,(x,y,R)=>{                                                          // glass
+  if(x===0||y===0||x===15||y===15)return[215,235,240,0.55];
+  if((x===y&&x>2&&x<7)||(x===y+1&&x>9&&x<13))return[255,255,255,0.30];
+  return[160,200,255,0.06];
+});
+paint(10,(x,y,R)=>{                                                         // brick
+  const off=((y>>2)&1)*4;
+  if(y%4===0||((x+off)&7)===0)return jit([181,175,166],6,R);
+  return jit([148,66,56],11,R);
+});
+paint(11,(x,y,R)=>{                                                         // water
+  const c=jit([40,82,198],10,R);
+  if(R()<0.06)return[c[0]+30,c[1]+40,c[2]+40,0.68];
+  return[c[0],c[1],c[2],0.68];
+});
+paint(12,(x,y,R)=>jit(SNOW_C,7,R));                                         // snow top
+paint(13,(x,y,R)=>{if(y<2||(y<3&&R()<0.5))return jit(SNOW_C,7,R);return jit(DIRT_C,13,R);}); // snow side
+paint(14,(x,y,R)=>jit([60,60,60],28,R));                                    // bedrock
+// ============================== cloud texture (tileable) ==============================
+const cloudCv=document.createElement('canvas');cloudCv.width=cloudCv.height=128;
+{
+  const g=cloudCv.getContext('2d');
+  const N=16,grid=[],R=mul32(999);
+  for(let i=0;i<N*N;i++)grid[i]=R();
+  const gv=(i,j)=>grid[(((i%N)+N)%N)+(((j%N)+N)%N)*N];
+  for(let j=0;j<16;j++)for(let i=0;i<16;i++){
+    let s=0;
+    for(let dj=-1;dj<=1;dj++)for(let di=-1;di<=1;di++)s+=gv(i+di,j+dj);
+    if(s/9>0.55){g.fillStyle='rgba(255,255,255,0.75)';g.fillRect(i*8,j*8,8,8);}
+  }
+}
+
+// ============================== WebGL ==============================
+const cv=document.getElementById('c');
+const gl=cv.getContext('webgl',{antialias:false,alpha:false});
+if(!gl){
+  document.getElementById('overlay').innerHTML='<h1>WebGL unavailable</h1><div class="sub">This game needs WebGL support.</div>';
+  throw new Error('no webgl');
+}
+function compile(type,src){
+  const s=gl.createShader(type);
+  gl.shaderSource(s,src);gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));
+  return s;
+}
+function prog(vs,fs){
+  const p=gl.createProgram();
+  gl.attachShader(p,compile(gl.VERTEX_SHADER,vs));
+  gl.attachShader(p,compile(gl.FRAGMENT_SHADER,fs));
+  gl.linkProgram(p);
+  if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(p));
+  return p;
+}
+const MAIN_VS=`
+attribute vec3 aPos;attribute vec2 aUV;attribute float aLight;
+uniform mat4 uProj,uView;uniform vec3 uOffset;uniform vec2 uUVOff;
+uniform float uFogNear,uFogFar;
+varying vec2 vUV;varying float vLight,vFog;
+void main(){
+  vec4 vp=uView*vec4(aPos+uOffset,1.0);
+  gl_Position=uProj*vp;
+  vUV=aUV+uUVOff;vLight=aLight;
+  vFog=clamp((length(vp.xyz)-uFogNear)/(uFogFar-uFogNear),0.0,1.0);
+}`;
+const MAIN_FS=`
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+varying vec2 vUV;varying float vLight,vFog;
+uniform sampler2D uTex;uniform vec3 uFogCol;uniform float uDay,uCut;
+void main(){
+  vec4 c=texture2D(uTex,vUV);
+  if(c.a<uCut)discard;
+  vec3 col=c.rgb*vLight*uDay;
+  gl_FragColor=vec4(mix(col,uFogCol,vFog),c.a);
+}`;
+const LINE_VS=`
+attribute vec3 aPos;
+uniform mat4 uProj,uView;uniform vec3 uPos;
+void main(){gl_Position=uProj*uView*vec4(aPos*1.004-0.002+uPos,1.0);}`;
+const LINE_FS=`
+precision mediump float;uniform vec4 uColor;
+void main(){gl_FragColor=uColor;}`;
+const PM=prog(MAIN_VS,MAIN_FS);
+const PL=prog(LINE_VS,LINE_FS);
+const L={
+  aPos:gl.getAttribLocation(PM,'aPos'),aUV:gl.getAttribLocation(PM,'aUV'),aLight:gl.getAttribLocation(PM,'aLight'),
+  uProj:gl.getUniformLocation(PM,'uProj'),uView:gl.getUniformLocation(PM,'uView'),
+  uOffset:gl.getUniformLocation(PM,'uOffset'),uUVOff:gl.getUniformLocation(PM,'uUVOff'),
+  uFogNear:gl.getUniformLocation(PM,'uFogNear'),uFogFar:gl.getUniformLocation(PM,'uFogFar'),
+  uFogCol:gl.getUniformLocation(PM,'uFogCol'),uDay:gl.getUniformLocation(PM,'uDay'),
+  uCut:gl.getUniformLocation(PM,'uCut'),uTex:gl.getUniformLocation(PM,'uTex'),
+};
+const LL={
+  aPos:gl.getAttribLocation(PL,'aPos'),
+  uProj:gl.getUniformLocation(PL,'uProj'),uView:gl.getUniformLocation(PL,'uView'),
+  uPos:gl.getUniformLocation(PL,'uPos'),uColor:gl.getUniformLocation(PL,'uColor'),
+};
+function makeTex(src,wrap){
+  const t=gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D,t);
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,wrap);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,wrap);
+  return t;
+}
+const texAtlas=makeTex(atlas,gl.CLAMP_TO_EDGE);
+const texCloud=makeTex(cloudCv,gl.REPEAT);
+gl.enable(gl.DEPTH_TEST);
+gl.depthFunc(gl.LEQUAL);
+gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+
+// block highlight wireframe (12 edges)
+const lineBuf=gl.createBuffer();
+{
+  const E=[
+    0,0,0,1,0,0, 1,0,0,1,0,1, 1,0,1,0,0,1, 0,0,1,0,0,0,
+    0,1,0,1,1,0, 1,1,0,1,1,1, 1,1,1,0,1,1, 0,1,1,0,1,0,
+    0,0,0,0,1,0, 1,0,0,1,1,0, 1,0,1,1,1,1, 0,0,1,0,1,1,
+  ];
+  gl.bindBuffer(gl.ARRAY_BUFFER,lineBuf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(E),gl.STATIC_DRAW);
+}
+// cloud layer quad
+const cloudBuf=gl.createBuffer();
+{
+  const S=1000,Y=108,r=128;
+  const q=[
+    -S,Y,-S,-S/r,-S/r,1,  S,Y,-S,S/r,-S/r,1,  S,Y,S,S/r,S/r,1,
+    -S,Y,-S,-S/r,-S/r,1,  S,Y,S,S/r,S/r,1,  -S,Y,S,-S/r,S/r,1,
+  ];
+  gl.bindBuffer(gl.ARRAY_BUFFER,cloudBuf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(q),gl.STATIC_DRAW);
+}
+function bindMesh(buf){
+  gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.enableVertexAttribArray(L.aPos);gl.vertexAttribPointer(L.aPos,3,gl.FLOAT,false,24,0);
+  gl.enableVertexAttribArray(L.aUV);gl.vertexAttribPointer(L.aUV,2,gl.FLOAT,false,24,12);
+  gl.enableVertexAttribArray(L.aLight);gl.vertexAttribPointer(L.aLight,1,gl.FLOAT,false,24,20);
+}
+
+// ============================== mat4 (column-major) ==============================
+const mProj=new Float32Array(16),mView=new Float32Array(16);
+const mA=new Float32Array(16),mB=new Float32Array(16),mC=new Float32Array(16),mD=new Float32Array(16);
+function ident(m){m.fill(0);m[0]=m[5]=m[10]=m[15]=1;return m;}
+function persp(m,fovy,asp,n,f){
+  const t=1/Math.tan(fovy/2);
+  m.fill(0);
+  m[0]=t/asp;m[5]=t;m[10]=(f+n)/(n-f);m[11]=-1;m[14]=2*f*n/(n-f);
+  return m;
+}
+function rotX(m,a){ident(m);const c=Math.cos(a),s=Math.sin(a);m[5]=c;m[6]=s;m[9]=-s;m[10]=c;return m;}
+function rotY(m,a){ident(m);const c=Math.cos(a),s=Math.sin(a);m[0]=c;m[2]=-s;m[8]=s;m[10]=c;return m;}
+function trans(m,x,y,z){ident(m);m[12]=x;m[13]=y;m[14]=z;return m;}
+function mul(o,a,b){
+  for(let c=0;c<4;c++)for(let r=0;r<4;r++){
+    o[c*4+r]=a[r]*b[c*4]+a[4+r]*b[c*4+1]+a[8+r]*b[c*4+2]+a[12+r]*b[c*4+3];
+  }
+  return o;
+}
+
+// ============================== world ==============================
+const chunks=new Map();
+const cidx=(x,y,z)=>x+((z+(y<<4))<<4);
+function genChunk(cx,cz){
+  const d=new Uint8Array(CS*CS*CH);
+  const hmap=new Int16Array(256);
+  for(let x=0;x<16;x++)for(let z=0;z<16;z++){
+    const wx=cx*16+x,wz=cz*16+z;
+    const h=groundH(wx,wz);
+    hmap[x*16+z]=h;
+    const top=h<=SEA+1?SAND:h>=62?SNOW:GRASS;
+    for(let y=0;y<=h;y++){
+      d[cidx(x,y,z)]=y===0?BEDROCK:y<h-2?STONE:y<h?DIRT:top;
+    }
+    if(top===SAND)for(let q=Math.max(1,h-2);q<h;q++)d[cidx(x,q,z)]=SAND;
+    for(let y=h+1;y<=SEA;y++)d[cidx(x,y,z)]=WATER;
+  }
+  // trees — candidates within 2 blocks of the chunk so canopies cross borders seamlessly
+  for(let x=-2;x<18;x++)for(let z=-2;z<18;z++){
+    const wx=cx*16+x,wz=cz*16+z;
+    const r=hash2(wx+91283,wz-71911);
+    if(r>=0.012)continue;
+    const inChunk=x>=0&&x<16&&z>=0&&z<16;
+    const h=inChunk?hmap[x*16+z]:groundH(wx,wz);
+    if(h<=SEA+1||h>=58)continue;
+    const th=4+((r*999)|0)%3;
+    if(inChunk){
+      d[cidx(x,h,z)]=DIRT;
+      for(let y=h+1;y<=h+th;y++)d[cidx(x,y,z)]=LOG;
+    }
+    for(let ly=h+th-2;ly<=h+th+1;ly++){
+      const rr=ly>=h+th?1:2;
+      for(let dx=-rr;dx<=rr;dx++)for(let dz=-rr;dz<=rr;dz++){
+        if(dx===0&&dz===0&&ly<=h+th)continue;
+        if(Math.abs(dx)===rr&&Math.abs(dz)===rr&&(rr===1||hash2(wx*3+dx,wz*3+dz+ly*17)<0.5))continue;
+        const tx=x+dx,tz=z+dz;
+        if(tx<0||tx>15||tz<0||tz>15||ly>=CH)continue;
+        const ii=cidx(tx,ly,tz);
+        if(d[ii]===AIR)d[ii]=LEAVES;
+      }
+    }
+  }
+  return d;
+}
+function getChunk(cx,cz){
+  const k=cx+','+cz;
+  let c=chunks.get(k);
+  if(!c){c={cx,cz,data:genChunk(cx,cz),mesh:null,queued:false};chunks.set(k,c);}
+  return c;
+}
+function getBlock(wx,wy,wz){
+  if(wy<0)return BEDROCK;
+  if(wy>=CH)return AIR;
+  return getChunk(wx>>4,wz>>4).data[cidx(wx&15,wy,wz&15)];
+}
+const dirtySet=new Set();
+function setBlock(wx,wy,wz,id){
+  if(wy<1||wy>=CH)return;
+  const cx=wx>>4,cz=wz>>4,lx=wx&15,lz=wz&15;
+  const c=getChunk(cx,cz);
+  c.data[cidx(lx,wy,lz)]=id;
+  dirtySet.add(c);
+  if(lx===0)dirtySet.add(getChunk(cx-1,cz));
+  if(lx===15)dirtySet.add(getChunk(cx+1,cz));
+  if(lz===0)dirtySet.add(getChunk(cx,cz-1));
+  if(lz===15)dirtySet.add(getChunk(cx,cz+1));
+}
+
+// ============================== meshing ==============================
+const FACES=[
+  {d:[1,0,0], c:[[1,0,0],[1,1,0],[1,1,1],[1,0,1]]},
+  {d:[-1,0,0],c:[[0,0,0],[0,1,0],[0,1,1],[0,0,1]]},
+  {d:[0,1,0], c:[[0,1,0],[1,1,0],[1,1,1],[0,1,1]]},
+  {d:[0,-1,0],c:[[0,0,0],[1,0,0],[1,0,1],[0,0,1]]},
+  {d:[0,0,1], c:[[0,0,1],[1,0,1],[1,1,1],[0,1,1]]},
+  {d:[0,0,-1],c:[[0,0,0],[1,0,0],[1,1,0],[0,1,0]]},
+];
+const SHADE=[0.62,0.62,1.0,0.5,0.8,0.8];
+const AOC=[0.45,0.66,0.84,1];
+const ORD0=[0,1,2,0,2,3],ORD1=[1,2,3,1,3,0];
+function buildMesh(c){
+  const grids=[];
+  for(let gz=-1;gz<=1;gz++)for(let gx=-1;gx<=1;gx++)grids[(gx+1)*3+(gz+1)]=getChunk(c.cx+gx,c.cz+gz).data;
+  const gb=(x,y,z)=>{
+    if(y<0)return BEDROCK;
+    if(y>=CH)return AIR;
+    return grids[((x>>4)+1)*3+((z>>4)+1)][(x&15)+(((z&15)+(y<<4))<<4)];
+  };
+  const opq=[],trs=[];
+  const X0=c.cx*16,Z0=c.cz*16;
+  const s1o=[0,0,0],s2o=[0,0,0];
+  for(let y=0;y<CH;y++)for(let z=0;z<16;z++)for(let x=0;x<16;x++){
+    const id=c.data[x+((z+(y<<4))<<4)];
+    if(!id)continue;
+    const B=BLOCK[id],fluid=B.fluid,transp=B.trans;
+    const topY=(fluid&&gb(x,y+1,z)!==WATER)?0.875:1;
+    for(let f=0;f<6;f++){
+      const F=FACES[f],d=F.d;
+      const n=gb(x+d[0],y+d[1],z+d[2]);
+      let vis;
+      if(n===AIR)vis=true;
+      else if(OPQ[n])vis=false;
+      else vis=!(n===id&&(fluid||transp));
+      if(!vis)continue;
+      const arr=(fluid||transp)?trs:opq;
+      const tile=B.t[d[1]===1?0:d[1]===-1?2:1];
+      const tu=tile&15,tv=tile>>4;
+      const shade=SHADE[f];
+      const a=d[0]!==0?0:d[1]!==0?1:2;
+      const t1=(a===0)?1:0,t2=(a===2)?1:2;
+      const bnx=x+d[0],bny=y+d[1],bnz=z+d[2];
+      const pts=[],uvs=[],lts=[];
+      for(let i=0;i<4;i++){
+        const cc=F.c[i];
+        pts.push([X0+x+cc[0],y+(cc[1]?topY:0),Z0+z+cc[2]]);
+        let u,v;
+        if(a===1){u=cc[0];v=cc[2];}else if(a===0){u=cc[2];v=1-cc[1];}else{u=cc[0];v=1-cc[1];}
+        uvs.push([(tu+u*0.996+0.002)/16,(tv+v*0.996+0.002)/16]);
+        let lt=shade;
+        if(!fluid){
+          s1o[0]=s1o[1]=s1o[2]=0;s2o[0]=s2o[1]=s2o[2]=0;
+          s1o[t1]=cc[t1]?1:-1;s2o[t2]=cc[t2]?1:-1;
+          const o1=OPQ[gb(bnx+s1o[0],bny+s1o[1],bnz+s1o[2])]?1:0;
+          const o2=OPQ[gb(bnx+s2o[0],bny+s2o[1],bnz+s2o[2])]?1:0;
+          const oc=OPQ[gb(bnx+s1o[0]+s2o[0],bny+s1o[1]+s2o[1],bnz+s1o[2]+s2o[2])]?1:0;
+          lt*=AOC[(o1&&o2)?0:3-(o1+o2+oc)];
+        }
+        lts.push(lt);
+      }
+      const ord=(lts[0]+lts[2]>=lts[1]+lts[3])?ORD0:ORD1;
+      for(let k=0;k<6;k++){
+        const i=ord[k];
+        arr.push(pts[i][0],pts[i][1],pts[i][2],uvs[i][0],uvs[i][1],lts[i]);
+      }
+    }
+  }
+  if(!c.mesh)c.mesh={bo:null,no:0,bt:null,nt:0};
+  const m=c.mesh;
+  if(!m.bo)m.bo=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,m.bo);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(opq),gl.DYNAMIC_DRAW);
+  m.no=opq.length/6;
+  if(!m.bt)m.bt=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,m.bt);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(trs),gl.DYNAMIC_DRAW);
+  m.nt=trs.length/6;
+}
+function freeMesh(c){
+  if(!c.mesh)return;
+  if(c.mesh.bo)gl.deleteBuffer(c.mesh.bo);
+  if(c.mesh.bt)gl.deleteBuffer(c.mesh.bt);
+  c.mesh=null;c.queued=false;
+}
+
+// ============================== chunk streaming ==============================
+const meshQueue=[];
+let lastPCX=1e9,lastPCZ=1e9,frameNo=0;
+function updateChunks(){
+  const pcx=Math.floor(P.x/16),pcz=Math.floor(P.z/16);
+  if(pcx!==lastPCX||pcz!==lastPCZ){
+    lastPCX=pcx;lastPCZ=pcz;
+    for(let dz=-RD;dz<=RD;dz++)for(let dx=-RD;dx<=RD;dx++){
+      const c=getChunk(pcx+dx,pcz+dz);
+      if(!c.mesh&&!c.queued){c.queued=true;meshQueue.push(c);}
+    }
+    meshQueue.sort((p,q)=>(Math.abs(q.cx-pcx)+Math.abs(q.cz-pcz))-(Math.abs(p.cx-pcx)+Math.abs(p.cz-pcz)));
+  }
+  let n=meshQueue.length>40?8:2;
+  while(n-->0&&meshQueue.length){
+    const c=meshQueue.pop();
+    c.queued=false;
+    if(Math.abs(c.cx-pcx)<=RD&&Math.abs(c.cz-pcz)<=RD)buildMesh(c);
+  }
+  if(dirtySet.size){
+    dirtySet.forEach(c=>buildMesh(c));
+    dirtySet.clear();
+  }
+  if(++frameNo%240===0){
+    chunks.forEach(c=>{
+      if(c.mesh&&(Math.abs(c.cx-pcx)>RD+1||Math.abs(c.cz-pcz)>RD+1))freeMesh(c);
+    });
+  }
+}
+
+// ============================== player ==============================
+const P={x:8.5,y:CH,z:8.5,vx:0,vy:0,vz:0,yaw:Math.PI*0.25,pitch:-0.12,fly:false,ground:false,sel:0};
+function findSpawn(){
+  let sx=8,h=CH-3;
+  for(let i=0;i<200;i++){
+    h=groundH(sx,8);
+    if(h>SEA+1&&h<60&&getBlock(sx,h+1,8)===AIR&&getBlock(sx,h+2,8)===AIR)break;
+    sx+=16;
+  }
+  P.x=sx+0.5;P.z=8.5;P.y=h+1.02;
+}
+findSpawn();
+const keys={};
+let locked=false,gameTime=DAY*0.22,wind=0;
+
+function move(a,amt){
+  const p=[P.x,P.y,P.z];
+  p[a]+=amt;
+  const x0=Math.floor(p[0]-0.3),x1=Math.floor(p[0]+0.3);
+  const y0=Math.floor(p[1]),y1=Math.floor(p[1]+1.8);
+  const z0=Math.floor(p[2]-0.3),z1=Math.floor(p[2]+0.3);
+  let hit=false;
+  for(let bx=x0;bx<=x1;bx++)for(let by=y0;by<=y1;by++)for(let bz=z0;bz<=z1;bz++){
+    if(!SOLID[getBlock(bx,by,bz)])continue;
+    hit=true;
+    if(a===0)p[0]=amt>0?Math.min(p[0],bx-0.3001):Math.max(p[0],bx+1.3001);
+    else if(a===1)p[1]=amt>0?Math.min(p[1],by-1.8001):Math.max(p[1],by+1);
+    else p[2]=amt>0?Math.min(p[2],bz-0.3001):Math.max(p[2],bz+1.3001);
+  }
+  if(hit){
+    if(a===0)P.vx=0;
+    else if(a===1){if(amt<0)P.ground=true;P.vy=0;}
+    else P.vz=0;
+  }
+  P.x=p[0];P.y=p[1];P.z=p[2];
+}
+function physics(dt){
+  const shift=keys.ShiftLeft||keys.ShiftRight;
+  const inW=getBlock(Math.floor(P.x),Math.floor(P.y+0.45),Math.floor(P.z))===WATER;
+  const headW=getBlock(Math.floor(P.x),Math.floor(P.y+1.5),Math.floor(P.z))===WATER;
+  let f=(keys.KeyW?1:0)-(keys.KeyS?1:0),s=(keys.KeyD?1:0)-(keys.KeyA?1:0);
+  const len=Math.hypot(f,s)||1;f/=len;s/=len;
+  const sprint=shift&&!P.fly&&f>0;
+  let sp=P.fly?13:sprint?6.4:4.4;
+  if(inW&&!P.fly)sp*=0.6;
+  const sy=Math.sin(P.yaw),cy=Math.cos(P.yaw);
+  const tx=(sy*f+cy*s)*sp,tz=(-cy*f+sy*s)*sp;
+  const acc=P.fly?6:P.ground?14:5;
+  P.vx+=(tx-P.vx)*Math.min(1,acc*dt);
+  P.vz+=(tz-P.vz)*Math.min(1,acc*dt);
+  if(P.fly){
+    const ty=((keys.Space?1:0)-(shift?1:0))*10;
+    P.vy+=(ty-P.vy)*Math.min(1,8*dt);
+  }else if(inW){
+    P.vy-=14*dt;
+    P.vy*=Math.exp(-2.4*dt);
+    if(keys.Space){
+      P.vy=Math.min(P.vy+34*dt,3.6);
+      if(!headW)P.vy=6;
+    }
+  }else{
+    P.vy-=30*dt;
+    if(P.vy<-55)P.vy=-55;
+    if(keys.Space&&P.ground)P.vy=9;
+  }
+  P.ground=false;
+  move(0,P.vx*dt);
+  move(1,P.vy*dt);
+  move(2,P.vz*dt);
+  if(P.y<-10){P.y=CH;P.vy=0;}
+}
+function lookDir(){
+  const cp=Math.cos(P.pitch);
+  return[Math.sin(P.yaw)*cp,Math.sin(P.pitch),-Math.cos(P.yaw)*cp];
+}
+
+// ============================== raycast (Amanatides & Woo) ==============================
+let target=null;
+function raycast(ox,oy,oz,dx,dy,dz,maxD){
+  let x=Math.floor(ox),y=Math.floor(oy),z=Math.floor(oz);
+  const b0=getBlock(x,y,z);
+  if(b0&&b0!==WATER)return{x,y,z,id:b0,face:[0,0,0]};
+  const stX=dx>0?1:-1,stY=dy>0?1:-1,stZ=dz>0?1:-1;
+  const tdX=dx!==0?Math.abs(1/dx):1e30,tdY=dy!==0?Math.abs(1/dy):1e30,tdZ=dz!==0?Math.abs(1/dz):1e30;
+  let tmX=dx!==0?(dx>0?(x+1-ox):(ox-x))/Math.abs(dx):1e30;
+  let tmY=dy!==0?(dy>0?(y+1-oy):(oy-y))/Math.abs(dy):1e30;
+  let tmZ=dz!==0?(dz>0?(z+1-oz):(oz-z))/Math.abs(dz):1e30;
+  const face=[0,0,0];
+  for(let i=0;i<128;i++){
+    let t;
+    if(tmX<tmY&&tmX<tmZ){x+=stX;t=tmX;tmX+=tdX;face[0]=-stX;face[1]=0;face[2]=0;}
+    else if(tmY<tmZ){y+=stY;t=tmY;tmY+=tdY;face[0]=0;face[1]=-stY;face[2]=0;}
+    else{z+=stZ;t=tmZ;tmZ+=tdZ;face[0]=0;face[1]=0;face[2]=-stZ;}
+    if(t>maxD)return null;
+    const b=getBlock(x,y,z);
+    if(b&&b!==WATER)return{x,y,z,id:b,face:[face[0],face[1],face[2]]};
+  }
+  return null;
+}
+function updateTarget(){
+  const d=lookDir();
+  target=raycast(P.x,P.y+1.62,P.z,d[0],d[1],d[2],6);
+}
+
+// ============================== actions ==============================
+function doBreak(){
+  if(!target||target.id===BEDROCK)return;
+  setBlock(target.x,target.y,target.z,AIR);
+  sfx('break');
+}
+function doPlace(){
+  if(!target)return;
+  const nx=target.x+target.face[0],ny=target.y+target.face[1],nz=target.z+target.face[2];
+  if(ny<1||ny>=CH)return;
+  const cur=getBlock(nx,ny,nz);
+  if(cur!==AIR&&cur!==WATER)return;
+  const id=HOT[P.sel];
+  if(SOLID[id]&&nx<P.x+0.3&&nx+1>P.x-0.3&&ny<P.y+1.8&&ny+1>P.y&&nz<P.z+0.3&&nz+1>P.z-0.3)return;
+  setBlock(nx,ny,nz,id);
+  sfx('place');
+}
+function doPick(){
+  if(!target)return;
+  const i=HOT.indexOf(target.id);
+  if(i>=0){setSel(i);sfx('pick');}
+}
+
+// ============================== input ==============================
+const overlay=document.getElementById('overlay');
+const playmsg=document.getElementById('playmsg');
+let mouseL=false,mouseR=false,actT=0,lastSpace=-9;
+overlay.addEventListener('click',()=>{
+  initAudio();
+  try{cv.requestPointerLock();}catch(e){}
+});
+document.addEventListener('pointerlockchange',()=>{
+  locked=document.pointerLockElement===cv;
+  overlay.style.display=locked?'none':'flex';
+  if(!locked){mouseL=mouseR=false;playmsg.textContent='— click to resume —';}
+});
+document.addEventListener('mousemove',e=>{
+  if(!locked)return;
+  P.yaw+=e.movementX*0.0024;
+  P.pitch-=e.movementY*0.0024;
+  if(P.pitch>1.55)P.pitch=1.55;
+  if(P.pitch<-1.55)P.pitch=-1.55;
+});
+cv.addEventListener('mousedown',e=>{
+  e.preventDefault();
+  if(!locked)return;
+  if(e.button===0){doBreak();mouseL=true;actT=perfT+0.3;}
+  else if(e.button===2){doPlace();mouseR=true;actT=perfT+0.3;}
+  else if(e.button===1)doPick();
+});
+addEventListener('mouseup',e=>{
+  if(e.button===0)mouseL=false;
+  if(e.button===2)mouseR=false;
+});
+addEventListener('contextmenu',e=>e.preventDefault());
+addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(e.code==='Space'){
+    e.preventDefault();
+    if(!e.repeat){
+      if(perfT-lastSpace<0.28)toggleFly();
+      lastSpace=perfT;
+    }
+  }
+  if(e.code==='KeyF'&&!e.repeat)toggleFly();
+  if(e.code.startsWith('Digit')){
+    const n=+e.code[5];
+    if(n>=1&&n<=9)setSel(n-1);
+  }
+});
+addEventListener('keyup',e=>{keys[e.code]=false;});
+addEventListener('wheel',e=>{
+  if(!locked)return;
+  setSel((P.sel+Math.sign(e.deltaY)+9)%9);
+});
+function toggleFly(){
+  P.fly=!P.fly;
+  P.vy=0;
+  toast(P.fly?'Flight: ON':'Flight: OFF');
+}
+function heldActions(){
+  if(!locked||perfT<actT)return;
+  if(mouseL){doBreak();actT=perfT+0.25;}
+  else if(mouseR){doPlace();actT=perfT+0.25;}
+}
+
+// ============================== audio ==============================
+let AC=null;
+function initAudio(){
+  if(!AC){
+    try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}
+  }
+  if(AC&&AC.state==='suspended')AC.resume();
+}
+function sfx(kind){
+  if(!AC)return;
+  const t=AC.currentTime;
+  const o=AC.createOscillator(),g=AC.createGain();
+  o.connect(g);g.connect(AC.destination);
+  if(kind==='break'){
+    o.type='square';
+    o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(45,t+0.13);
+    g.gain.setValueAtTime(0.09,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.13);
+    o.start(t);o.stop(t+0.14);
+  }else if(kind==='place'){
+    o.type='triangle';
+    o.frequency.setValueAtTime(240,t);o.frequency.exponentialRampToValueAtTime(170,t+0.07);
+    g.gain.setValueAtTime(0.12,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.07);
+    o.start(t);o.stop(t+0.08);
+  }else{
+    o.type='sine';
+    o.frequency.setValueAtTime(520,t);
+    g.gain.setValueAtTime(0.08,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.05);
+    o.start(t);o.stop(t+0.06);
+  }
+}
+
+// ============================== UI ==============================
+const slots=[];
+{
+  const hb=document.getElementById('hotbar');
+  HOT.forEach((id,i)=>{
+    const s=document.createElement('div');
+    s.className='slot'+(i===0?' sel':'');
+    const icon=document.createElement('canvas');
+    icon.width=icon.height=16;
+    const c2=icon.getContext('2d');
+    c2.imageSmoothingEnabled=false;
+    const tile=BLOCK[id].t[1];
+    c2.drawImage(atlas,(tile&15)*16,(tile>>4)*16,16,16,0,0,16,16);
+    const k=document.createElement('span');
+    k.textContent=i+1;
+    s.append(icon,k);
+    hb.append(s);
+    slots.push(s);
+  });
+}
+function setSel(i){
+  slots[P.sel].classList.remove('sel');
+  P.sel=i;
+  slots[i].classList.add('sel');
+  toast(BLOCK[HOT[i]].n);
+}
+const toastEl=document.getElementById('toast');
+let toastTimer=0;
+function toast(msg){
+  toastEl.textContent=msg;
+  toastEl.style.opacity=1;
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{toastEl.style.opacity=0;},1100);
+}
+const infoEl=document.getElementById('info'),tintEl=document.getElementById('tint');
+
+// ============================== sky / day-night ==============================
+function smooth01(x){x=x<0?0:x>1?1:x;return x*x*(3-2*x);}
+function skyState(){
+  const s=Math.sin((gameTime/DAY)*Math.PI*2);
+  const d=smooth01((s+0.22)/0.44);
+  const light=0.22+0.78*d;
+  let r=0.012+(0.47-0.012)*d, g=0.02+(0.71-0.02)*d, b=0.06+(0.99-0.06)*d;
+  const f=Math.max(0,1-Math.abs(s)/0.3)*d*0.45;
+  r+=(0.96-r)*f;g+=(0.55-g)*f;b+=(0.32-b)*f;
+  return{light,sky:[r,g,b]};
+}
+
+// ============================== render ==============================
+let eyeWater=false;
+function render(){
+  const st=skyState();
+  eyeWater=getBlock(Math.floor(P.x),Math.floor(P.y+1.62),Math.floor(P.z))===WATER;
+  let fogCol=st.sky,fogNear=RD*16*0.55,fogFar=RD*16-8;
+  if(eyeWater){
+    fogCol=[0.05*st.light,0.18*st.light,0.45*st.light];
+    fogNear=1;fogFar=22;
+  }
+  tintEl.style.display=eyeWater?'block':'none';
+  gl.clearColor(fogCol[0],fogCol[1],fogCol[2],1);
+  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  persp(mProj,75*Math.PI/180,cv.width/cv.height,0.12,1600);
+  rotX(mA,-P.pitch);rotY(mB,P.yaw);mul(mC,mA,mB);
+  trans(mA,-P.x,-(P.y+1.62),-P.z);mul(mView,mC,mA);
+
+  const pcx=Math.floor(P.x/16),pcz=Math.floor(P.z/16);
+  const vis=[];
+  for(let dz=-RD;dz<=RD;dz++)for(let dx=-RD;dx<=RD;dx++){
+    const c=chunks.get((pcx+dx)+','+(pcz+dz));
+    if(c&&c.mesh)vis.push(c);
+  }
+  gl.useProgram(PM);
+  gl.uniformMatrix4fv(L.uProj,false,mProj);
+  gl.uniformMatrix4fv(L.uView,false,mView);
+  gl.uniform3f(L.uOffset,0,0,0);
+  gl.uniform2f(L.uUVOff,0,0);
+  gl.uniform1f(L.uFogNear,fogNear);
+  gl.uniform1f(L.uFogFar,fogFar);
+  gl.uniform3f(L.uFogCol,fogCol[0],fogCol[1],fogCol[2]);
+  gl.uniform1f(L.uDay,st.light);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D,texAtlas);
+  gl.uniform1i(L.uTex,0);
+  // opaque pass (leaves use alpha cutout)
+  gl.uniform1f(L.uCut,0.5);
+  for(const c of vis){
+    if(c.mesh.no){bindMesh(c.mesh.bo);gl.drawArrays(gl.TRIANGLES,0,c.mesh.no);}
+  }
+  // transparent pass (water/glass), back to front
+  gl.uniform1f(L.uCut,0.004);
+  gl.enable(gl.BLEND);
+  gl.depthMask(false);
+  vis.sort((p,q)=>{
+    const dp=(p.cx*16+8-P.x)**2+(p.cz*16+8-P.z)**2;
+    const dq=(q.cx*16+8-P.x)**2+(q.cz*16+8-P.z)**2;
+    return dq-dp;
+  });
+  for(const c of vis){
+    if(c.mesh.nt){bindMesh(c.mesh.bt);gl.drawArrays(gl.TRIANGLES,0,c.mesh.nt);}
+  }
+  // clouds
+  if(!eyeWater){
+    gl.bindTexture(gl.TEXTURE_2D,texCloud);
+    gl.uniform3f(L.uOffset,P.x,0,P.z);
+    gl.uniform2f(L.uUVOff,(P.x+wind*3)/128,P.z/128);
+    gl.uniform1f(L.uFogNear,300);
+    gl.uniform1f(L.uFogFar,900);
+    bindMesh(cloudBuf);
+    gl.drawArrays(gl.TRIANGLES,0,6);
+  }
+  gl.depthMask(true);
+  gl.disable(gl.BLEND);
+  // block highlight
+  if(target&&locked){
+    gl.useProgram(PL);
+    gl.disableVertexAttribArray(L.aUV);
+    gl.disableVertexAttribArray(L.aLight);
+    gl.bindBuffer(gl.ARRAY_BUFFER,lineBuf);
+    gl.enableVertexAttribArray(LL.aPos);
+    gl.vertexAttribPointer(LL.aPos,3,gl.FLOAT,false,0,0);
+    gl.uniformMatrix4fv(LL.uProj,false,mProj);
+    gl.uniformMatrix4fv(LL.uView,false,mView);
+    gl.uniform3f(LL.uPos,target.x,target.y,target.z);
+    gl.uniform4f(LL.uColor,0.05,0.05,0.05,1);
+    gl.drawArrays(gl.LINES,0,24);
+  }
+}
+
+// ============================== HUD ==============================
+let fps=0,fpsCnt=0,fpsT=0;
+function hud(){
+  const deg=((P.yaw*180/Math.PI)%360+360)%360;
+  const dir=['N','NE','E','SE','S','SW','W','NW'][Math.round(deg/45)%8];
+  const hrs=((gameTime/DAY)*24+6)%24;
+  const hh=String(hrs|0).padStart(2,'0'),mm=String(((hrs%1)*60)|0).padStart(2,'0');
+  infoEl.textContent=
+    fps+' fps\n'+
+    'XYZ '+P.x.toFixed(1)+' / '+P.y.toFixed(1)+' / '+P.z.toFixed(1)+'\n'+
+    'facing '+dir+(P.fly?'  ·  flying':'')+'\n'+
+    'time '+hh+':'+mm+'  ·  seed '+SEED;
+}
+
+// ============================== main loop ==============================
+let perfT=0,last=performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  let dt=(now-last)/1000;
+  last=now;
+  if(dt>0.05)dt=0.05;
+  perfT=now/1000;
+  gameTime+=dt;
+  wind+=dt;
+  if(locked){
+    physics(dt);
+    heldActions();
+  }
+  updateChunks();
+  updateTarget();
+  render();
+  fpsCnt++;
+  if(now-fpsT>500){fps=Math.round(fpsCnt*1000/(now-fpsT));fpsCnt=0;fpsT=now;hud();}
+}
+function resize(){
+  const d=Math.min(devicePixelRatio||1,1.75);
+  cv.width=(innerWidth*d)|0;
+  cv.height=(innerHeight*d)|0;
+  gl.viewport(0,0,cv.width,cv.height);
+}
+addEventListener('resize',resize);
+resize();
+window.GAME={P,getBlock,setBlock,chunks,raycast,setTime:t=>{gameTime=t;},DAY};
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

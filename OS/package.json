@@ -1,0 +1,17 @@
+{
+  "name": "fableos",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "FableOS — a complete desktop operating system that runs in your browser",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --base=./",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  }
+}

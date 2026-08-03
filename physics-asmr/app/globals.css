@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+:root {
+  --background: #05060f;
+  --foreground: #ededed;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Thin, quiet range sliders for the control bar. */
+.asmr-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 14px;
+  background: transparent;
+  cursor: pointer;
+}
+.asmr-range::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.16);
+}
+.asmr-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -4.5px;
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  background: rgba(235, 240, 255, 0.9);
+  box-shadow: 0 0 8px rgba(160, 180, 255, 0.55);
+  transition: transform 0.15s ease;
+}
+.asmr-range::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+.asmr-range::-moz-range-track {
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.16);
+}
+.asmr-range::-moz-range-thumb {
+  height: 12px;
+  width: 12px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(235, 240, 255, 0.9);
+  box-shadow: 0 0 8px rgba(160, 180, 255, 0.55);
+}

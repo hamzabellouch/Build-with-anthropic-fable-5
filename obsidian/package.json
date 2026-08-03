@@ -1,0 +1,46 @@
+{
+  "name": "obsidian-web",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "server": "node server/index.ts",
+    "server:pg": "VAULT_DB=postgres node server/index.ts",
+    "test:server": "node server/contract-test.ts",
+    "typecheck:server": "tsc -p server/tsconfig.json",
+    "pg:up": "podman run -d --replace --name obsidian-vault-pg --network=host -e POSTGRES_USER=vault -e POSTGRES_PASSWORD=vault -e POSTGRES_DB=vault docker.io/library/postgres:16-alpine -c listen_addresses=localhost -c port=5433",
+    "pg:down": "podman rm -f obsidian-vault-pg"
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.7.1",
+    "@codemirror/lang-markdown": "^6.3.1",
+    "@codemirror/language": "^6.10.6",
+    "@codemirror/language-data": "^6.5.1",
+    "@codemirror/search": "^6.5.8",
+    "@codemirror/state": "^6.4.1",
+    "@codemirror/view": "^6.35.0",
+    "@lezer/common": "^1.2.3",
+    "@lezer/highlight": "^1.2.1",
+    "@lezer/markdown": "^1.3.2",
+    "jszip": "^3.10.1",
+    "lucide-react": "^0.460.0",
+    "markdown-it": "^14.1.0",
+    "pg": "^8.21.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^25.9.3",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}

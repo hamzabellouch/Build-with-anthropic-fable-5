@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>HORIZONS — Flight Simulator</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='24' font-size='24'%3E%E2%9C%88%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --accent: #53d2ff;
+    --accent2: #ffb454;
+    --bg: #0a1018;
+    --panel: rgba(13, 22, 34, 0.82);
+    --line: rgba(120, 180, 220, 0.25);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: #dce8f2;
+    -webkit-user-select: none; user-select: none;
+  }
+  canvas { display: block; }
+  #scene { position: absolute; inset: 0; }
+  #hud { position: absolute; inset: 0; pointer-events: none; }
+  #vignette {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.38) 100%);
+  }
+
+  .overlay {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px;
+    background: rgba(5, 10, 16, 0.55);
+    backdrop-filter: blur(6px);
+    z-index: 10; transition: opacity 0.3s;
+  }
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+
+  /* ---------- Title menu ---------- */
+  #menu { background: linear-gradient(180deg, rgba(4,10,18,0.25) 0%, rgba(4,10,18,0.78) 100%); }
+  .title {
+    font-size: 64px; font-weight: 800; letter-spacing: 14px; color: #fff;
+    text-shadow: 0 0 28px rgba(83, 210, 255, 0.55), 0 2px 4px rgba(0,0,0,0.6);
+  }
+  .title .glyph { color: var(--accent); }
+  .subtitle {
+    font-size: 14px; letter-spacing: 6px; color: #9fc3d8; text-transform: uppercase;
+    margin-top: -10px;
+  }
+  #planeCards { display: flex; gap: 18px; margin: 16px 0 4px; }
+  .card {
+    width: 240px; padding: 16px 18px 14px; border-radius: 12px; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--line);
+    transition: transform .15s, border-color .15s, box-shadow .15s;
+  }
+  .card:hover { transform: translateY(-4px); border-color: rgba(83,210,255,.6); }
+  .card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 24px rgba(83, 210, 255, 0.35);
+    background: rgba(18, 34, 52, 0.92);
+  }
+  .card h3 { font-size: 19px; color: #fff; letter-spacing: 1px; }
+  .card .role { font-size: 11px; color: var(--accent2); text-transform: uppercase; letter-spacing: 2px; margin: 2px 0 10px; }
+  .card .stat { display: flex; justify-content: space-between; font-size: 12.5px; color: #a8c4d6; padding: 2.5px 0; border-top: 1px solid rgba(120,180,220,0.12); }
+  .card .stat b { color: #e8f4fc; font-weight: 600; }
+  .card .blurb { font-size: 11.5px; color: #7fa3b8; margin-top: 10px; line-height: 1.45; min-height: 46px; }
+
+  .btn {
+    pointer-events: auto; cursor: pointer; border: 1px solid var(--accent);
+    background: linear-gradient(180deg, rgba(83,210,255,0.22), rgba(83,210,255,0.08));
+    color: #eaf8ff; font-size: 18px; letter-spacing: 4px; font-weight: 700;
+    padding: 13px 64px; border-radius: 8px; text-transform: uppercase;
+    transition: all .15s;
+  }
+  .btn:hover { background: rgba(83,210,255,0.35); box-shadow: 0 0 26px rgba(83,210,255,0.45); }
+  .btn.small { font-size: 13px; padding: 9px 26px; letter-spacing: 2px; }
+  .btn.ghost { border-color: rgba(160,190,210,0.4); background: rgba(40,60,80,0.3); }
+
+  .opts { display: flex; gap: 26px; align-items: center; font-size: 13px; color: #a8c4d6; }
+  .opts label { display: flex; gap: 7px; align-items: center; cursor: pointer; }
+  .opts input { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+
+  #controlsHint {
+    display: grid; grid-template-columns: repeat(4, auto); gap: 4px 28px;
+    font-size: 12px; color: #8fb2c6; background: rgba(10,18,28,0.6);
+    padding: 14px 22px; border-radius: 10px; border: 1px solid rgba(120,180,220,0.15);
+  }
+  #controlsHint b { color: #d8ecf8; font-weight: 600; font-family: "Consolas", monospace; }
+  .footnote { font-size: 11px; color: #5d7d92; letter-spacing: 1px; }
+
+  /* ---------- Pause ---------- */
+  #pause h2, #crash h2 { font-size: 40px; letter-spacing: 10px; color: #fff; }
+  #pause .row, #crash .row { display: flex; gap: 14px; }
+
+  /* ---------- Crash ---------- */
+  #crash h2 { color: #ff6b57; text-shadow: 0 0 30px rgba(255,80,60,0.6); }
+  #crashReason { color: #c9dae6; font-size: 15px; }
+
+  /* ---------- Toast ---------- */
+  #toast {
+    position: absolute; top: 13%; left: 50%; transform: translateX(-50%);
+    background: rgba(10, 20, 32, 0.85); border: 1px solid var(--line);
+    color: #dff2ff; font-size: 15px; letter-spacing: 1.5px;
+    padding: 9px 26px; border-radius: 8px; z-index: 5;
+    opacity: 0; transition: opacity .25s; pointer-events: none;
+  }
+  #toast.show { opacity: 1; }
+
+  #loadnote { position:absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+    color:#69889c; font-size:12px; letter-spacing:2px; z-index: 11; }
+</style>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+  <canvas id="hud"></canvas>
+  <div id="vignette"></div>
+  <div id="toast"></div>
+
+  <!-- Title / aircraft selection -->
+  <div id="menu" class="overlay">
+    <div class="title">HORIZ<span class="glyph">⊙</span>NS</div>
+    <div class="subtitle">Flight Simulator</div>
+    <div id="planeCards"></div>
+    <div class="opts">
+      <label><input type="checkbox" id="optAssist"> Stability assist (easier)</label>
+      <label><input type="checkbox" id="optInvert"> Invert pitch axis</label>
+      <label><input type="checkbox" id="optMouse"> Mouse yoke</label>
+      <label>Wind <select id="optWind" style="background:#142233;color:#dce8f2;border:1px solid var(--line);border-radius:4px;padding:2px 6px;">
+        <option value="0">Calm</option>
+        <option value="1" selected>Light breeze</option>
+        <option value="2">Moderate + gusts</option>
+        <option value="3">Strong + turbulence</option>
+      </select></label>
+    </div>
+    <button class="btn" id="btnFly">Start Engine</button>
+    <div id="controlsHint"></div>
+    <div class="footnote">FULL 6-DOF FLIGHT DYNAMICS · ISA ATMOSPHERE · REAL AERODYNAMIC STALL · GROUND EFFECT</div>
+  </div>
+
+  <!-- Pause -->
+  <div id="pause" class="overlay hidden">
+    <h2>PAUSED</h2>
+    <div class="row">
+      <button class="btn small" id="btnResume">Resume</button>
+      <button class="btn small ghost" id="btnRestart">Back to Runway</button>
+      <button class="btn small ghost" id="btnMenu">Change Aircraft</button>
+    </div>
+    <div id="pauseHint" class="opts" style="flex-direction:column; gap:8px;"></div>
+  </div>
+
+  <!-- Crash -->
+  <div id="crash" class="overlay hidden">
+    <h2>AIRCRAFT DESTROYED</h2>
+    <div id="crashReason"></div>
+    <div class="row">
+      <button class="btn small" id="btnCrashRestart">Back to Runway</button>
+      <button class="btn small ghost" id="btnCrashMenu">Change Aircraft</button>
+    </div>
+  </div>
+
+  <div id="loadnote">LOADING WORLD…</div>
+
+  <script type="importmap">
+    { "imports": { "three": "./lib/three.module.js" } }
+  </script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

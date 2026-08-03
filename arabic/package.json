@@ -1,0 +1,15 @@
+{
+  "name": "bayt-tech-channel",
+  "private": true,
+  "version": "1.0.0",
+  "description": "موقع قناة بايت — قناة تقنية بالعربي",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}
